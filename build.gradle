@@ -148,7 +148,7 @@ subprojects { p ->
 
     def preprocessed = p.layout.buildDirectory.dir('preprocessed')
     def preprocess = tasks.register('preprocessSources') {
-        def sources = ['main', 'gametest']
+        def sources = ['main', 'gametest', 'smoketest']
         sources.each { inputs.dir(rootProject.file("src/${it}/java")).withPropertyName("src_${it}") }
         inputs.property('mc', mcVersion)
         outputs.dir(preprocessed)
@@ -205,6 +205,32 @@ subprojects { p ->
             gametest {
                 java.srcDirs = [preprocessed.map { it.dir('gametest/java') }]
                 resources.srcDirs = [rootProject.file('src/gametest/resources')]
+            }
+        }
+    }
+
+    if (!clientGameTests) {
+        // Before 1.21.4 there is no Fabric client game test API: use our own smoke test (runSmokeTest)
+        sourceSets {
+            smoketest {
+                java.srcDirs = [preprocessed.map { it.dir('smoketest/java') }]
+                resources.srcDirs = [rootProject.file('src/smoketest/resources')]
+                compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+                runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+            }
+        }
+        loom {
+            mods {
+                capecreator { sourceSet sourceSets.main }
+                'capecreator-smoke' { sourceSet sourceSets.smoketest }
+            }
+            runs {
+                smokeTest {
+                    client()
+                    name = 'Smoke Test'
+                    source sourceSets.smoketest
+                    runDir 'build/run/smoketest'
+                }
             }
         }
     }

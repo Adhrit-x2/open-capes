@@ -1,6 +1,9 @@
 # Cape Creator
 
-A client-side Fabric mod for Minecraft 1.21.5. You design a cape in a pixel editor in-game and wear it.
+A client-side Fabric mod for Minecraft. You design a cape in a pixel editor in-game and wear it.
+
+## Supported versions
+Every Minecraft release from **1.21 to 1.21.11** and **26.1 to 26.3**, on Fabric with Fabric API. Each Minecraft version has its own jar, `cape-creator-<version>+mc<minecraft>.jar`, so use the one that matches your game.
 
 ## Use
 - Press **J** in-game to open the editor. You can rebind it under Controls → Cape Creator.
@@ -29,9 +32,24 @@ The cape also shows up on elytra. Only you can see it, because it is client-side
 The cape layer must be turned on (Options → Skin Customization → Cape).
 
 ## Build
-    ./gradlew build              # jar in build/libs/
-    ./gradlew runClient          # dev client
-    ./gradlew runClientGameTest  # automated test, saves screenshots to build/run/clientGameTest/screenshots
+    ./gradlew dist                          # builds every version into dist/
+    ./gradlew -Pmc=1.21.5 :1.21.5:build     # one version (jar in versions/1.21.5/build/libs/)
+    ./gradlew -Pmc=26.3 :26.3:runClient     # play-test a version
+    tools/test-versions.sh                  # in-game test of every version (or list versions to test)
+
+`-Pmc=a,b` limits the build to those versions, which is much faster while working on one.
+
+### How multi-version works
+- There is **one copy of the code** in `src/`, written against Minecraft 1.21.5 with Mojang's official names. `versions/<mc>/gradle.properties` holds each version's Minecraft, Fabric API and Java versions.
+- Each version's code is preprocessed from `src/` (see the top of `build.gradle`):
+  - Code that only applies to some versions is wrapped in `//#if MC >= 1.21.6` … `//#elif …` … `//#else` … `//#endif`.
+  - Renamed classes and methods (for example `ResourceLocation` → `Identifier` from 1.21.11, or `GuiGraphics` → `GuiGraphicsExtractor` from 26.1) are listed once in `renames()` and swapped automatically.
+- Most version differences live in `Compat.java`, and the screen input changes from 1.21.9 live in `CompatScreen.java`. The rest of the code doesn't need version checks.
+- 1.21.x builds with Loom's remapping plugin. 26.x is unobfuscated and uses `net.fabricmc.fabric-loom` with Java 25.
+
+### Testing
+- **1.21.4 and later:** Fabric's client game test (`src/gametest`). It drives the real game: it draws, imports GIFs and links, crops, saves and switches capes, uses Sides, rotates the preview with the mouse, and screenshots the cape in the world. Screenshots go to `versions/<mc>/build/run/clientGameTest/screenshots`.
+- **1.21 – 1.21.3:** these predate that API, so `src/smoketest` instead creates a world, checks the cape is on the player and in its texture, opens the editor, and takes screenshots.
 
 ## Ready-made animated capes
 `capes/` has two sets of GIFs:

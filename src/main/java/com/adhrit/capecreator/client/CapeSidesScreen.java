@@ -1,5 +1,6 @@
 package com.adhrit.capecreator.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.adhrit.capecreator.CapeManager;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -149,8 +150,9 @@ public class CapeSidesScreen extends CompatScreen {
 
     @Override
     protected boolean onMouseClicked(double mouseX, double mouseY, int button) {
+        // our own areas first: from 26.3 the default handler claims any click over a widget's bounds
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && (inside.click(mouseX, mouseY) || edges.click(mouseX, mouseY))) return true;
         if (superMouseClicked(mouseX, mouseY, button)) return true;
-        if (button == 0 && (inside.click(mouseX, mouseY) || edges.click(mouseX, mouseY))) return true;
         return preview.mouseClicked(mouseX, mouseY, button);
     }
 

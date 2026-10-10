@@ -1,5 +1,6 @@
 package com.adhrit.capecreator.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.adhrit.capecreator.Compat;
 import com.adhrit.capecreator.CapeCreatorClient;
 import com.adhrit.capecreator.CapeLibrary;
@@ -178,9 +179,8 @@ public class SavedCapesScreen extends CompatScreen {
 
     @Override
     protected boolean onMouseClicked(double mouseX, double mouseY, int button) {
-        if (superMouseClicked(mouseX, mouseY, button)) return true;
         int i = tileAt(mouseX, mouseY);
-        if (i >= 0 && button == 0) {
+        if (i >= 0 && button == InputConstants.MOUSE_BUTTON_LEFT) {
             try {
                 CapeLibrary.wear(entries.get(i));
                 status = Component.literal("Wearing \"" + entries.get(i).name() + "\"");
@@ -191,7 +191,7 @@ public class SavedCapesScreen extends CompatScreen {
             updateButtons();
             return true;
         }
-        return false;
+        return superMouseClicked(mouseX, mouseY, button);
     }
 
     @Override

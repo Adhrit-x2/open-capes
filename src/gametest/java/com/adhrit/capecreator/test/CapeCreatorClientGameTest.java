@@ -37,7 +37,11 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             world.getClientWorld().waitForChunksRender();
             //#endif
             world.getServer().runCommand("time set noon");
+            //#if MC >= 1.21.11
+            world.getServer().runCommand("gamerule fall_damage false");
+            //#else
             world.getServer().runCommand("gamerule fallDamage false");
+            //#endif
 
             // The keybind should open the editor.
             context.getInput().pressKey(InputConstants.KEY_J);
@@ -117,7 +121,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 Button save = client.screen.children().stream()
                         .filter(e -> e instanceof Button b && b.getMessage().getString().equals("Save & Close"))
                         .map(e -> (Button) e).findFirst().orElseThrow();
-                double scale = client.getWindow().getGuiScale();
+                double scale = cursorScale(client);
                 return new double[]{(save.getX() + save.getWidth() / 2.0) * scale, (save.getY() + save.getHeight() / 2.0) * scale};
             });
             context.getInput().setCursorPos(pos[0], pos[1]);
@@ -161,7 +165,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             // down tips the top towards you (pitch goes down, i.e. viewed from above).
             context.<ReflectiveOperationException>runOnClient(client -> preview(client.screen).setAngles(0f, -10f));
             double[] centre = context.computeOnClient(client -> {
-                double scale = client.getWindow().getGuiScale();
+                double scale = cursorScale(client);
                 return new double[]{(client.screen.width - 60) * scale, client.screen.height / 2.0 * scale};
             });
             context.getInput().setCursorPos(centre[0], centre[1]);
@@ -186,7 +190,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             context.waitForScreen(com.adhrit.capecreator.client.CapeSidesScreen.class);
             // click the red swatch (index 8: row 1, col 0) in the Inside palette with the real mouse
             double[] red = context.computeOnClient(client -> {
-                double scale = client.getWindow().getGuiScale();
+                double scale = cursorScale(client);
                 int x = 16 + 6, y = 30 + 38 + 12 + 6;
                 return new double[]{x * scale, y * scale};
             });
@@ -306,9 +310,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 // a web page link should give a helpful error, not crash
                 context.setScreen(CapeEditorScreen::new);
                 context.runOnClient(client -> client.keyboardHandler.setClipboard(base + "/page"));
-                context.getInput().holdControl();
-                context.getInput().pressKey(InputConstants.KEY_V);
-                context.getInput().releaseControl();
+                pressPaste(context);
                 context.waitForScreen(com.adhrit.capecreator.client.UrlImportScreen.class);
                 context.waitFor(client -> client.screen instanceof com.adhrit.capecreator.client.UrlImportScreen
                         && screenText(client.screen).contains("web page"), 200);
@@ -317,9 +319,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 // a real GIF link opens the crop screen
                 context.runOnClient(client -> client.keyboardHandler.setClipboard(base + "/cape.gif"));
                 context.setScreen(CapeEditorScreen::new);
-                context.getInput().holdControl();
-                context.getInput().pressKey(InputConstants.KEY_V);
-                context.getInput().releaseControl();
+                pressPaste(context);
                 context.waitForScreen(com.adhrit.capecreator.client.CropScreen.class);
                 context.waitTicks(3);
                 context.takeScreenshot("link-crop-screen");
@@ -402,7 +402,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             Button b = client.screen.children().stream()
                     .filter(e -> e instanceof Button bw && label.test(bw.getMessage().getString()))
                     .map(e -> (Button) e).findFirst().orElseThrow();
-            double scale = client.getWindow().getGuiScale();
+            double scale = cursorScale(client);
             return new double[]{(b.getX() + b.getWidth() / 2.0) * scale, (b.getY() + b.getHeight() / 2.0) * scale};
         });
         context.getInput().setCursorPos(pos[0], pos[1]);
@@ -435,4 +435,26 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
         return (com.adhrit.capecreator.client.PlayerPreview) f.get(screen);
     }
 
+
+    /** Paste shortcut on the editor: Cmd+V on macOS, Ctrl+V elsewhere. */
+    private static void pressPaste(ClientGameTestContext context) {
+        //#if MC >= 26.3
+        // 26.3 (SDL) recognises shortcuts by the layout keycode, 'v'
+        context.runOnClient(client -> client.screen.keyPressed(new net.minecraft.client.input.KeyEvent(
+                InputConstants.KEY_V, 'v', net.minecraft.client.input.InputQuirks.EDIT_SHORTCUT_KEY_MODIFIER)));
+        //#elif MC >= 1.21.9
+        context.runOnClient(client -> client.screen.keyPressed(new net.minecraft.client.input.KeyEvent(
+                InputConstants.KEY_V, 0, net.minecraft.client.input.InputQuirks.EDIT_SHORTCUT_KEY_MODIFIER)));
+        //#else
+        context.getInput().holdControl();
+        context.getInput().pressKey(InputConstants.KEY_V);
+        context.getInput().releaseControl();
+        //#endif
+    }
+
+    /** Window cursor units per GUI pixel, the same conversion Minecraft's mouse handler uses. */
+    private static double cursorScale(net.minecraft.client.Minecraft client) {
+        var window = client.getWindow();
+        return (double) window.getScreenWidth() / window.getGuiScaledWidth();
+    }
 }

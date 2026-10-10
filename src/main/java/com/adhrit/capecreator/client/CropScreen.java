@@ -1,5 +1,6 @@
 package com.adhrit.capecreator.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.adhrit.capecreator.Compat;
 import com.adhrit.capecreator.CapeCreatorClient;
 import com.adhrit.capecreator.CapeManager;
@@ -184,21 +185,20 @@ public class CropScreen extends CompatScreen {
 
     @Override
     protected boolean onMouseClicked(double mouseX, double mouseY, int button) {
-        if (superMouseClicked(mouseX, mouseY, button)) return true;
-        if (button == 0 && insideBox(mouseX, mouseY)) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && insideBox(mouseX, mouseY)) {
             dragging = true;
             dragOffsetX = (mouseX - viewX) / viewScale - cropX;
             dragOffsetY = (mouseY - viewY) / viewScale - cropY;
             return true;
         }
-        if (button == 0 && mouseX >= viewX && mouseX < viewX + viewW && mouseY >= viewY && mouseY < viewY + viewH) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && mouseX >= viewX && mouseX < viewX + viewW && mouseY >= viewY && mouseY < viewY + viewH) {
             // click outside the box: centre it there
             cropX = (float) ((mouseX - viewX) / viewScale - cropW / 2);
             cropY = (float) ((mouseY - viewY) / viewScale - cropH() / 2);
             clampCrop();
             return true;
         }
-        return false;
+        return superMouseClicked(mouseX, mouseY, button);
     }
 
     @Override
