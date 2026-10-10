@@ -1,10 +1,11 @@
 package com.adhrit.capecreator.client;
 
+import com.adhrit.capecreator.Compat;
 import com.adhrit.capecreator.CapeCreatorClient;
 import com.adhrit.capecreator.CapeManager;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -270,9 +271,9 @@ public class CapeEditorScreen extends CompatScreen {
         int[] c = cellAt(mouseX, mouseY);
         if (c != null) {
             setFocused(null);
-            if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+            if (button == InputConstants.MOUSE_BUTTON_RIGHT) {
                 setColor(CapeManager.get(c[0], c[1]));
-            } else if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+            } else if (button == InputConstants.MOUSE_BUTTON_LEFT) {
                 pushUndo();
                 if (tool == Tool.FILL) {
                     floodFill(c[0], c[1]);
@@ -285,7 +286,7 @@ public class CapeEditorScreen extends CompatScreen {
         }
 
         int py = paletteY();
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && mouseX >= panelX && mouseX < panelX + 8 * SWATCH
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && mouseX >= panelX && mouseX < panelX + 8 * SWATCH
                 && mouseY >= py && mouseY < py + 3 * SWATCH) {
             int i = (int) ((mouseY - py) / SWATCH) * 8 + (int) ((mouseX - panelX) / SWATCH);
             setColor(PALETTE[i]);
@@ -323,8 +324,8 @@ public class CapeEditorScreen extends CompatScreen {
 
     @Override
     protected boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
-        boolean ctrl = (modifiers & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0;
-        if (ctrl && keyCode == GLFW.GLFW_KEY_Z) {
+        boolean ctrl = (modifiers & (InputConstants.MOD_CONTROL | Compat.MOD_SUPER)) != 0;
+        if (ctrl && keyCode == InputConstants.KEY_Z) {
             undo();
             return true;
         }
@@ -335,8 +336,8 @@ public class CapeEditorScreen extends CompatScreen {
                 return true;
             }
         }
-        if (getFocused() != hexField && (keyCode == GLFW.GLFW_KEY_LEFT || keyCode == GLFW.GLFW_KEY_RIGHT)) {
-            CapeManager.selectFrame(CapeManager.editFrame() + (keyCode == GLFW.GLFW_KEY_LEFT ? -1 : 1));
+        if (getFocused() != hexField && (keyCode == InputConstants.KEY_LEFT || keyCode == InputConstants.KEY_RIGHT)) {
+            CapeManager.selectFrame(CapeManager.editFrame() + (keyCode == InputConstants.KEY_LEFT ? -1 : 1));
             return true;
         }
         return superKeyPressed(keyCode, scanCode, modifiers);
@@ -422,7 +423,7 @@ public class CapeEditorScreen extends CompatScreen {
         renderCanvas(context, mouseX, mouseY);
         renderPalette(context);
         preview.setBounds(previewX1, canvasY, previewX2, height - 32);
-        preview.render(context, font);
+        preview.draw(context, font);
 
 
         int frameRowY = canvasY + 5 * 22;

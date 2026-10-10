@@ -10,6 +10,9 @@ import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+
+import java.nio.file.Path;
 //#if MC >= 1.21.11
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -26,6 +29,13 @@ import net.minecraft.client.renderer.RenderType;
  */
 public final class Compat {
     private Compat() {}
+
+    /** The Cmd (Mac) / Windows-key modifier bit; InputConstants only has it from 1.21.9. */
+    //#if MC >= 1.21.9
+    public static final int MOD_SUPER = InputConstants.MOD_SUPER;
+    //#else
+    public static final int MOD_SUPER = 8;
+    //#endif
 
     // ---- textures and pixels (pixels are always ARGB here) ----
 
@@ -143,10 +153,30 @@ public final class Compat {
 
     public static void toast(Component title, Component description) {
         Minecraft mc = Minecraft.getInstance();
-        //#if MC >= 1.21.2
+        //#if MC >= 26.2
+        SystemToast.addOrUpdate(mc.gui.toastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION, title, description);
+        //#elif MC >= 1.21.2
         SystemToast.addOrUpdate(mc.getToastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION, title, description);
         //#else
         SystemToast.addOrUpdate(mc.getToasts(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION, title, description);
+        //#endif
+    }
+
+    /** Message just above the hotbar. */
+    public static void overlayMessage(Player player, Component message) {
+        //#if MC >= 26.1
+        player.sendOverlayMessage(message);
+        //#else
+        player.displayClientMessage(message, true);
+        //#endif
+    }
+
+    /** Opens a folder in Finder / Explorer. */
+    public static void openFolder(Path path) {
+        //#if MC >= 26.3
+        com.mojang.blaze3d.Blaze3D.openPath(path);
+        //#else
+        net.minecraft.Util.getPlatform().openPath(path);
         //#endif
     }
 }

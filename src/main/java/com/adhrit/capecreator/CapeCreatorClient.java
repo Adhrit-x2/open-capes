@@ -7,7 +7,7 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,9 +23,9 @@ public class CapeCreatorClient implements ClientModInitializer {
     public void onInitializeClient() {
         CapeManager.load();
 
-        openEditorKey = KeyBindingHelper.registerKeyBinding(Compat.keyMapping("key.capecreator.open", GLFW.GLFW_KEY_J));
-        nextCapeKey = KeyBindingHelper.registerKeyBinding(Compat.keyMapping("key.capecreator.next", GLFW.GLFW_KEY_RIGHT_BRACKET));
-        previousCapeKey = KeyBindingHelper.registerKeyBinding(Compat.keyMapping("key.capecreator.previous", GLFW.GLFW_KEY_LEFT_BRACKET));
+        openEditorKey = KeyBindingHelper.registerKeyBinding(Compat.keyMapping("key.capecreator.open", InputConstants.KEY_J));
+        nextCapeKey = KeyBindingHelper.registerKeyBinding(Compat.keyMapping("key.capecreator.next", InputConstants.KEY_RBRACKET));
+        previousCapeKey = KeyBindingHelper.registerKeyBinding(Compat.keyMapping("key.capecreator.previous", InputConstants.KEY_LBRACKET));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openEditorKey.consumeClick()) {
@@ -42,12 +42,12 @@ public class CapeCreatorClient implements ClientModInitializer {
         if (client.player == null) return;
         try {
             CapeLibrary.Entry entry = CapeLibrary.cycle(direction);
-            client.player.displayClientMessage(Component.literal(entry == null
+            Compat.overlayMessage(client.player, Component.literal(entry == null
                     ? "No saved capes yet - press J, then Saved, to save one"
-                    : "Cape: " + entry.name()), true);
+                    : "Cape: " + entry.name()));
         } catch (Exception e) {
             LOGGER.warn("Could not switch cape", e);
-            client.player.displayClientMessage(Component.literal("Couldn't load that cape"), true);
+            Compat.overlayMessage(client.player, Component.literal("Couldn't load that cape"));
         }
     }
 }

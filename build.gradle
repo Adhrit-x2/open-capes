@@ -59,13 +59,34 @@ static List<Map> renames() {
     return [
             [since: '1.21.11', from: 'ResourceLocation', to: 'Identifier'],
             [since: '1.21.11', from: 'net.minecraft.Util', to: 'net.minecraft.util.Util'],
+            // 26.1: GUI drawing became "render state extraction"
+            [since: '26.1', from: 'void render(GuiGraphics', to: 'void extractRenderState(GuiGraphics'],
+            [since: '26.1', from: 'super.render(', to: 'super.extractRenderState('],
+            [since: '26.1', from: 'GuiGraphics', to: 'GuiGraphicsExtractor'],
+            [since: '26.1', from: '.drawString(', to: '.text('],
+            [since: '26.1', from: '.drawCenteredString(', to: '.centeredText('],
+            [since: '26.1', from: '.submitEntityRenderState(', to: '.entity('],
+            [since: '26.1', from: 'net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper', to: 'net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper'],
+            [since: '26.1', from: 'KeyBindingHelper.registerKeyBinding', to: 'KeyMappingHelper.registerKeyMapping'],
+            // 26.2: screens live on Minecraft.gui; 26.3: SDL input, renderpearl graphics API
+            [since: '26.2', from: 'minecraft.setScreen(', to: 'minecraft.gui.setScreen('],
+            [since: '26.2', from: 'client.setScreen(', to: 'client.gui.setScreen('],
+            [since: '26.2', from: 'minecraft.screen', to: 'minecraft.gui.screen()'],
+            [since: '26.2', from: 'client.screen', to: 'client.gui.screen()'],
+            [since: '26.3', from: '.scancode()', to: '.keycode()'],
+            [since: '26.3', from: 'InputConstants.Type.KEYSYM', to: 'InputConstants.Type.KEYBOARD'],
+            [since: '26.3', from: 'com.mojang.blaze3d.textures.FilterMode', to: 'com.mojang.renderpearl.api.textures.FilterMode'],
     ]
 }
 
 static String applyRenames(String line, List<Integer> mc) {
     for (rule in renames()) {
         if (compareMc(mc, parseMc(rule.since as String)) >= 0) {
-            line = line.replaceAll('(?<!\\w)' + java.util.regex.Pattern.quote(rule.from as String) + '(?!\\w)',
+            String from = rule.from as String
+            // only require word boundaries where the pattern itself starts/ends with a word character
+            String before = Character.isJavaIdentifierPart(from.charAt(0)) ? '(?<!\\w)' : ''
+            String after = Character.isJavaIdentifierPart(from.charAt(from.length() - 1)) ? '(?!\\w)' : ''
+            line = line.replaceAll(before + java.util.regex.Pattern.quote(from) + after,
                     java.util.regex.Matcher.quoteReplacement(rule.to as String))
         }
     }

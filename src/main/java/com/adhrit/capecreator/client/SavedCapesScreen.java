@@ -8,7 +8,6 @@ import com.mojang.blaze3d.platform.NativeImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
-import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -65,7 +64,7 @@ public class SavedCapesScreen extends CompatScreen {
                 Files.createDirectories(CapeLibrary.directory());
             } catch (Exception ignored) {
             }
-            Util.getPlatform().openPath(CapeLibrary.directory());
+            Compat.openFolder(CapeLibrary.directory());
         }).bounds(width / 2 - 50, by, 100, 20).build()).setTooltip(Tooltip.create(Component.literal("You can also drop GIFs into this folder")));
         addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose())
                 .bounds(width / 2 + 54, by, 100, 20).build());

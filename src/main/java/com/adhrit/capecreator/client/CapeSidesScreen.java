@@ -106,7 +106,7 @@ public class CapeSidesScreen extends CompatScreen {
             return false;
         }
 
-        void render(GuiGraphics context) {
+        void draw(GuiGraphics context) {
             context.drawString(font, Component.literal(label), x, y, 0xFFFFFFFF);
             int py = paletteY();
             int current = effective.get();
@@ -138,13 +138,13 @@ public class CapeSidesScreen extends CompatScreen {
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
         context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFFFF);
-        inside.render(context);
-        edges.render(context);
+        inside.draw(context);
+        edges.draw(context);
         context.drawString(font, Component.literal("Main background: "), 16, height - 44, 0xFFA0A0A0);
         int bx = 16 + font.width("Main background: ");
         outline(context, bx, height - 46, 12, 12, 0xFFFFFFFF);
         context.fill(bx + 1, height - 45, bx + 11, height - 35, CapeManager.backgroundColor());
-        preview.render(context, font);
+        preview.draw(context, font);
     }
 
     @Override

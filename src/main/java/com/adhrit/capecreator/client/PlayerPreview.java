@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 /**
  * A 3D view of the player inside a box: drag to turn it (like grabbing it), drag up/down to look
@@ -59,7 +59,7 @@ public class PlayerPreview {
 
     public boolean mouseClicked(double mx, double my, int button) {
         if (!contains(mx, my)) return false;
-        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) reset();
+        if (button == InputConstants.MOUSE_BUTTON_RIGHT) reset();
         else dragging = true;
         return true;
     }
@@ -81,7 +81,7 @@ public class PlayerPreview {
         return true;
     }
 
-    public void render(GuiGraphics context, Font textRenderer) {
+    public void draw(GuiGraphics context, Font textRenderer) {
         LocalPlayer player = Minecraft.getInstance().player;
         int w = x2 - x1;
         if (player == null || w < 40) return;

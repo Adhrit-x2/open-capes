@@ -7,7 +7,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.gui.components.Button;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,12 +29,18 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
 
     private void run(ClientGameTestContext context) throws Exception {
         try (TestSingleplayerContext world = context.worldBuilder().create()) {
+            //#if MC >= 26.2
+            world.getConnection().waitForChunksRender();
+            //#elif MC >= 26.1
+            world.getClientLevel().waitForChunksRender();
+            //#else
             world.getClientWorld().waitForChunksRender();
+            //#endif
             world.getServer().runCommand("time set noon");
             world.getServer().runCommand("gamerule fallDamage false");
 
             // The keybind should open the editor.
-            context.getInput().pressKey(GLFW.GLFW_KEY_J);
+            context.getInput().pressKey(InputConstants.KEY_J);
             context.waitForScreen(CapeEditorScreen.class);
 
             // Paint a red cross on the default design.
@@ -115,7 +121,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 return new double[]{(save.getX() + save.getWidth() / 2.0) * scale, (save.getY() + save.getHeight() / 2.0) * scale};
             });
             context.getInput().setCursorPos(pos[0], pos[1]);
-            context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
             context.waitForScreen(null);
 
             context.runOnClient(client -> {
@@ -159,12 +165,12 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 return new double[]{(client.screen.width - 60) * scale, client.screen.height / 2.0 * scale};
             });
             context.getInput().setCursorPos(centre[0], centre[1]);
-            context.getInput().holdMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            context.getInput().holdMouse(InputConstants.MOUSE_BUTTON_LEFT);
             for (int i = 0; i < 6; i++) {
                 context.getInput().moveCursor(6 * 2, 4 * 2);
                 context.waitTick();
             }
-            context.getInput().releaseMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            context.getInput().releaseMouse(InputConstants.MOUSE_BUTTON_LEFT);
             context.<ReflectiveOperationException>runOnClient(client -> {
                 float y = preview(client.screen).yaw(), p = preview(client.screen).pitch();
                 check(y < -20, "dragging right should turn the preview (yaw down), yaw=" + y);
@@ -185,7 +191,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 return new double[]{x * scale, y * scale};
             });
             context.getInput().setCursorPos(red[0], red[1]);
-            context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+            context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
             context.waitTick();
             context.runOnClient(client -> check(Integer.valueOf(0xFFFF0000).equals(CapeManager.insideColor()),
                     "clicking red in Inside should set it, got " + CapeManager.formatSideColor(CapeManager.insideColor())));
@@ -214,11 +220,11 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             // undo twice -> back to Auto
             context.runOnClient(client -> {
                 //#if MC >= 1.21.9
-                client.screen.keyPressed(new net.minecraft.client.input.KeyEvent(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL));
-                client.screen.keyPressed(new net.minecraft.client.input.KeyEvent(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL));
+                client.screen.keyPressed(new net.minecraft.client.input.KeyEvent(InputConstants.KEY_Z, 0, InputConstants.MOD_CONTROL));
+                client.screen.keyPressed(new net.minecraft.client.input.KeyEvent(InputConstants.KEY_Z, 0, InputConstants.MOD_CONTROL));
                 //#else
-                client.screen.keyPressed(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL);
-                client.screen.keyPressed(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL);
+                client.screen.keyPressed(InputConstants.KEY_Z, 0, InputConstants.MOD_CONTROL);
+                client.screen.keyPressed(InputConstants.KEY_Z, 0, InputConstants.MOD_CONTROL);
                 //#endif
                 check(CapeManager.insideColor() == null && CapeManager.edgeColor() == null,
                         "undo should put sides back to Auto, got " + CapeManager.formatSideColor(CapeManager.insideColor())
@@ -301,7 +307,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 context.setScreen(CapeEditorScreen::new);
                 context.runOnClient(client -> client.keyboardHandler.setClipboard(base + "/page"));
                 context.getInput().holdControl();
-                context.getInput().pressKey(GLFW.GLFW_KEY_V);
+                context.getInput().pressKey(InputConstants.KEY_V);
                 context.getInput().releaseControl();
                 context.waitForScreen(com.adhrit.capecreator.client.UrlImportScreen.class);
                 context.waitFor(client -> client.screen instanceof com.adhrit.capecreator.client.UrlImportScreen
@@ -312,7 +318,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 context.runOnClient(client -> client.keyboardHandler.setClipboard(base + "/cape.gif"));
                 context.setScreen(CapeEditorScreen::new);
                 context.getInput().holdControl();
-                context.getInput().pressKey(GLFW.GLFW_KEY_V);
+                context.getInput().pressKey(InputConstants.KEY_V);
                 context.getInput().releaseControl();
                 context.waitForScreen(com.adhrit.capecreator.client.CropScreen.class);
                 context.waitTicks(3);
@@ -356,7 +362,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 check(com.adhrit.capecreator.CapeLibrary.list().size() == 2, "expected 2 saved capes");
                 client.setScreen(null);
             });
-            context.getInput().pressKey(GLFW.GLFW_KEY_RIGHT_BRACKET);
+            context.getInput().pressKey(InputConstants.KEY_RBRACKET);
             context.waitTick();
             context.runOnClient(client -> {
                 check("night city".equals(CapeManager.currentName()),
@@ -364,13 +370,13 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
                 check(Integer.valueOf(0xFFFFFF00).equals(CapeManager.edgeColor()),
                         "night city should bring back its yellow edges, got " + CapeManager.formatSideColor(CapeManager.edgeColor()));
             });
-            context.getInput().pressKey(GLFW.GLFW_KEY_RIGHT_BRACKET);
+            context.getInput().pressKey(InputConstants.KEY_RBRACKET);
             context.waitTick();
             context.runOnClient(client -> {
                 check("red".equals(CapeManager.currentName()), "] should go to red, got " + CapeManager.currentName());
                 check(CapeManager.get(0, 0, 0) == 0xFFFF0000, "red cape should be red");
             });
-            context.getInput().pressKey(GLFW.GLFW_KEY_LEFT_BRACKET);
+            context.getInput().pressKey(InputConstants.KEY_LBRACKET);
             context.waitTicks(10);
             context.runOnClient(client -> check("night city".equals(CapeManager.currentName()),
                     "[ should go back to night city, got " + CapeManager.currentName()));
@@ -400,7 +406,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             return new double[]{(b.getX() + b.getWidth() / 2.0) * scale, (b.getY() + b.getHeight() / 2.0) * scale};
         });
         context.getInput().setCursorPos(pos[0], pos[1]);
-        context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        context.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
     }
 
     /** All text drawn by a screen's widgets plus its fields, for simple "did this message appear" checks. */
