@@ -2,17 +2,6 @@ package com.adhrit.capecreator.client;
 
 import com.adhrit.capecreator.CapeCreatorClient;
 import com.adhrit.capecreator.CapeManager;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.text.Text;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.MathHelper;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFW;
@@ -24,6 +13,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 /** Pixel editor for the cape, with a live preview of the player wearing it. */
 public class CapeEditorScreen extends Screen {
@@ -53,12 +48,12 @@ public class CapeEditorScreen extends Screen {
 
     private float cell;   // screen pixels per design pixel; below 1 for big HD designs
     private int canvasX, canvasY, canvasW, canvasH, panelX, previewX1, previewX2;
-    private TextFieldWidget hexField;
-    private ButtonWidget toolButton, mirrorButton, scaleButton, enabledButton, fpsButton;
+    private EditBox hexField;
+    private Button toolButton, mirrorButton, scaleButton, enabledButton, fpsButton;
     private boolean updatingHex = false;
 
     public CapeEditorScreen() {
-        super(Text.translatable("screen.capecreator.title"));
+        super(Component.translatable("screen.capecreator.title"));
     }
 
     @Override
@@ -67,75 +62,75 @@ public class CapeEditorScreen extends Screen {
 
         int bw = (PANEL_W - 4) / 2;
         int y = canvasY;
-        toolButton = addDrawableChild(ButtonWidget.builder(Text.empty(), b -> {
+        toolButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
             tool = tool == Tool.PENCIL ? Tool.FILL : Tool.PENCIL;
             refreshLabels();
-        }).dimensions(panelX, y, bw, 20).build());
-        mirrorButton = addDrawableChild(ButtonWidget.builder(Text.empty(), b -> {
+        }).bounds(panelX, y, bw, 20).build());
+        mirrorButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
             mirror = !mirror;
             refreshLabels();
-        }).dimensions(panelX + bw + 4, y, bw, 20).build());
+        }).bounds(panelX + bw + 4, y, bw, 20).build());
         y += 22;
-        scaleButton = addDrawableChild(ButtonWidget.builder(Text.empty(), b -> cycleScale())
-                .dimensions(panelX, y, bw, 20).build());
-        scaleButton.setTooltip(Tooltip.of(Text.literal("Cape resolution: " + CapeManager.width() + "x" + CapeManager.height()
+        scaleButton = addRenderableWidget(Button.builder(Component.empty(), b -> cycleScale())
+                .bounds(panelX, y, bw, 20).build());
+        scaleButton.setTooltip(Tooltip.create(Component.literal("Cape resolution: " + CapeManager.width() + "x" + CapeManager.height()
                 + " pixels. Higher sizes look sharper but are harder to paint by hand.")));
-        enabledButton = addDrawableChild(ButtonWidget.builder(Text.empty(), b -> {
+        enabledButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
             CapeManager.setEnabled(!CapeManager.isEnabled());
             refreshLabels();
-        }).dimensions(panelX + bw + 4, y, bw, 20).build());
+        }).bounds(panelX + bw + 4, y, bw, 20).build());
         y += 22;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Fill All"), b -> fillAll())
-                .dimensions(panelX, y, bw, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Undo"), b -> undo())
-                .dimensions(panelX + bw + 4, y, bw, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Fill All"), b -> fillAll())
+                .bounds(panelX, y, bw, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Undo"), b -> undo())
+                .bounds(panelX + bw + 4, y, bw, 20).build());
         y += 22;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Saved"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("Saved"), b -> {
             CapeManager.save();
-            client.setScreen(new SavedCapesScreen());
-        }).dimensions(panelX, y, bw, 20).build()).setTooltip(Tooltip.of(Text.literal(
+            minecraft.setScreen(new SavedCapesScreen());
+        }).bounds(panelX, y, bw, 20).build()).setTooltip(Tooltip.create(Component.literal(
                 "Your saved capes: switch between them, or save this one. In game, [ and ] cycle through them.")));
-        addDrawableChild(ButtonWidget.builder(Text.literal("Link"), b -> openLinkImport(null))
-                .dimensions(panelX + bw + 4, y, bw, 20).build()).setTooltip(Tooltip.of(Text.literal(
+        addRenderableWidget(Button.builder(Component.literal("Link"), b -> openLinkImport(null))
+                .bounds(panelX + bw + 4, y, bw, 20).build()).setTooltip(Tooltip.create(Component.literal(
                 "Import a GIF or image from a link. You can also paste a link with Ctrl/Cmd+V, or drop a file on this window.")));
         y += 22;
-        fpsButton = addDrawableChild(ButtonWidget.builder(Text.empty(), b -> cycleFps())
-                .dimensions(panelX, y, bw, 20).build());
-        fpsButton.setTooltip(Tooltip.of(Text.literal("Animation speed (frames per second)")));
-        addDrawableChild(ButtonWidget.builder(Text.literal("Sides"), b -> client.setScreen(new CapeSidesScreen(this)))
-                .dimensions(panelX + bw + 4, y, bw, 20).build()).setTooltip(Tooltip.of(Text.literal(
+        fpsButton = addRenderableWidget(Button.builder(Component.empty(), b -> cycleFps())
+                .bounds(panelX, y, bw, 20).build());
+        fpsButton.setTooltip(Tooltip.create(Component.literal("Animation speed (frames per second)")));
+        addRenderableWidget(Button.builder(Component.literal("Sides"), b -> minecraft.setScreen(new CapeSidesScreen(this)))
+                .bounds(panelX + bw + 4, y, bw, 20).build()).setTooltip(Tooltip.create(Component.literal(
                 "Choose the colors of the inside and edges of the cape")));
         y += 22;
 
         // Animation frames: [<] 1/3 [>] [+] [-]
-        addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> CapeManager.selectFrame(CapeManager.editFrame() - 1))
-                .dimensions(panelX, y, 18, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> CapeManager.selectFrame(CapeManager.editFrame() + 1))
-                .dimensions(panelX + PANEL_W - 58, y, 18, 20).build());
-        ButtonWidget add = addDrawableChild(ButtonWidget.builder(Text.literal("+"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("<"), b -> CapeManager.selectFrame(CapeManager.editFrame() - 1))
+                .bounds(panelX, y, 18, 20).build());
+        addRenderableWidget(Button.builder(Component.literal(">"), b -> CapeManager.selectFrame(CapeManager.editFrame() + 1))
+                .bounds(panelX + PANEL_W - 58, y, 18, 20).build());
+        Button add = addRenderableWidget(Button.builder(Component.literal("+"), b -> {
             pushUndo();
             CapeManager.duplicateFrame();
-        }).dimensions(panelX + PANEL_W - 38, y, 18, 20).build());
-        add.setTooltip(Tooltip.of(Text.literal("Add frame (copy of this one)")));
-        ButtonWidget remove = addDrawableChild(ButtonWidget.builder(Text.literal("-"), b -> {
+        }).bounds(panelX + PANEL_W - 38, y, 18, 20).build());
+        add.setTooltip(Tooltip.create(Component.literal("Add frame (copy of this one)")));
+        Button remove = addRenderableWidget(Button.builder(Component.literal("-"), b -> {
             pushUndo();
             CapeManager.deleteFrame();
-        }).dimensions(panelX + PANEL_W - 18, y, 18, 20).build());
-        remove.setTooltip(Tooltip.of(Text.literal("Delete this frame")));
+        }).bounds(panelX + PANEL_W - 18, y, 18, 20).build());
+        remove.setTooltip(Tooltip.create(Component.literal("Delete this frame")));
 
-        hexField = new TextFieldWidget(textRenderer, panelX + 22, paletteY() + 3 * SWATCH + 6, PANEL_W - 22, 18, Text.literal("Hex"));
+        hexField = new EditBox(font, panelX + 22, paletteY() + 3 * SWATCH + 6, PANEL_W - 22, 18, Component.literal("Hex"));
         hexField.setMaxLength(7);
-        hexField.setChangedListener(this::onHexChanged);
-        addDrawableChild(hexField);
+        hexField.setResponder(this::onHexChanged);
+        addRenderableWidget(hexField);
 
         int bottom = height - 26;
         int pw = (previewX2 - previewX1 - 4) / 2;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Save & Close"), b -> close())
-                .dimensions(previewX1, bottom, pw, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("Save & Close"), b -> onClose())
+                .bounds(previewX1, bottom, pw, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> {
             cancelled = true;
-            close();
-        }).dimensions(previewX1 + pw + 4, bottom, pw, 20).build());
+            onClose();
+        }).bounds(previewX1 + pw + 4, bottom, pw, 20).build());
 
         setColor(color);
         refreshLabels();
@@ -162,18 +157,18 @@ public class CapeEditorScreen extends Screen {
     }
 
     private void refreshLabels() {
-        toolButton.setMessage(Text.literal(tool == Tool.PENCIL ? "Tool: Pencil" : "Tool: Bucket"));
-        mirrorButton.setMessage(Text.literal("Mirror: " + (mirror ? "On" : "Off")));
-        scaleButton.setMessage(Text.literal("Size: " + CapeManager.scale() + "x"));
-        enabledButton.setMessage(Text.literal("Cape: " + (CapeManager.isEnabled() ? "On" : "Off")));
-        fpsButton.setMessage(Text.literal("FPS: " + CapeManager.fps()));
+        toolButton.setMessage(Component.literal(tool == Tool.PENCIL ? "Tool: Pencil" : "Tool: Bucket"));
+        mirrorButton.setMessage(Component.literal("Mirror: " + (mirror ? "On" : "Off")));
+        scaleButton.setMessage(Component.literal("Size: " + CapeManager.scale() + "x"));
+        enabledButton.setMessage(Component.literal("Cape: " + (CapeManager.isEnabled() ? "On" : "Off")));
+        fpsButton.setMessage(Component.literal("FPS: " + CapeManager.fps()));
     }
 
     private void setColor(int argb) {
         color = 0xFF000000 | argb;
         if (hexField != null) {
             updatingHex = true;
-            hexField.setText(String.format("#%06X", color & 0xFFFFFF));
+            hexField.setValue(String.format("#%06X", color & 0xFFFFFF));
             updatingHex = false;
         }
     }
@@ -203,7 +198,7 @@ public class CapeEditorScreen extends Screen {
         if (state == null) return;
         boolean scaleChanged = state.scale() != CapeManager.scale();
         CapeManager.restore(state);
-        if (scaleChanged) clearAndInit();
+        if (scaleChanged) rebuildWidgets();
         else refreshLabels();
     }
 
@@ -225,7 +220,7 @@ public class CapeEditorScreen extends Screen {
             if (scales[i] == CapeManager.scale()) next = scales[(i + 1) % scales.length];
         }
         CapeManager.setScale(next);
-        clearAndInit();
+        rebuildWidgets();
     }
 
     private void fillAll() {
@@ -334,7 +329,7 @@ public class CapeEditorScreen extends Screen {
             return true;
         }
         if (getFocused() != hexField && Screen.isPaste(keyCode)) {
-            String clip = client.keyboard.getClipboard();
+            String clip = minecraft.keyboardHandler.getClipboard();
             if (UrlImportScreen.looksLikeUrl(clip)) {
                 openLinkImport(clip.trim());
                 return true;
@@ -353,7 +348,7 @@ public class CapeEditorScreen extends Screen {
      * Anything else (GIF, PNG, JPG) opens the crop screen.
      */
     @Override
-    public void onFilesDropped(List<Path> paths) {
+    public void onFilesDrop(List<Path> paths) {
         for (Path path : paths) {
             try {
                 byte[] data = Files.readAllBytes(path);
@@ -372,9 +367,9 @@ public class CapeEditorScreen extends Screen {
                     boolean animatedStrip = source.frames().size() == 1 && panels.size() > 1;
                     pushUndo();
                     CapeManager.importFrames(panels, 10 * s, 16 * s, animatedStrip ? 10 : source.fps());
-                    clearAndInit();
+                    rebuildWidgets();
                 } else {
-                    client.setScreen(new CropScreen(this, source, this::onCropped));
+                    minecraft.setScreen(new CropScreen(this, source, this::onCropped));
                 }
                 return;
             } catch (Exception e) {
@@ -386,21 +381,21 @@ public class CapeEditorScreen extends Screen {
     private void openLinkImport(String url) {
         String clip = url;
         if (clip == null) {
-            String c = client.keyboard.getClipboard();
+            String c = minecraft.keyboardHandler.getClipboard();
             clip = UrlImportScreen.looksLikeUrl(c) ? c.trim() : "";
         }
-        client.setScreen(new UrlImportScreen(this, clip, this::onCropped));
+        minecraft.setScreen(new UrlImportScreen(this, clip, this::onCropped));
     }
 
     /** Called by the crop screen with the chosen part of the image. */
     private void onCropped(CropScreen.Result result) {
         pushUndo();
         CapeManager.importFrames(result.frames(), result.width(), result.height(), result.fps());
-        client.setScreen(this);
+        minecraft.setScreen(this);
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         if (cancelled) {
             CapeManager.restore(original);
             CapeManager.setEnabled(originalEnabled);
@@ -414,29 +409,29 @@ public class CapeEditorScreen extends Screen {
                 }
             }
         }
-        super.close();
+        super.onClose();
     }
 
     // ---- rendering ----
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFFFF);
+        context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFFFF);
 
         renderCanvas(context, mouseX, mouseY);
         renderPalette(context);
         preview.setBounds(previewX1, canvasY, previewX2, height - 32);
-        preview.render(context, textRenderer);
+        preview.render(context, font);
 
 
         int frameRowY = canvasY + 5 * 22;
-        context.drawCenteredTextWithShadow(textRenderer,
-                Text.literal((CapeManager.editFrame() + 1) + "/" + CapeManager.frameCount()),
+        context.drawCenteredString(font,
+                Component.literal((CapeManager.editFrame() + 1) + "/" + CapeManager.frameCount()),
                 panelX + 20 + (PANEL_W - 80) / 2, frameRowY + 6, 0xFFFFFFFF);
     }
 
-    private void renderCanvas(DrawContext context, int mouseX, int mouseY) {
+    private void renderCanvas(GuiGraphics context, int mouseX, int mouseY) {
         int w = CapeManager.width(), h = CapeManager.height();
         outline(context, canvasX - 1, canvasY - 1, canvasW + 2, canvasH + 2, 0xFFFFFFFF);
         if (cell >= 1) {
@@ -482,7 +477,7 @@ public class CapeEditorScreen extends Screen {
         }
     }
 
-    private void renderPalette(DrawContext context) {
+    private void renderPalette(GuiGraphics context) {
         int py = paletteY();
         for (int i = 0; i < PALETTE.length; i++) {
             int x = panelX + (i % 8) * SWATCH, y = py + (i / 8) * SWATCH;
@@ -494,7 +489,7 @@ public class CapeEditorScreen extends Screen {
         context.fill(panelX + 1, sy + 1, panelX + 17, sy + 17, color);
     }
 
-    private static void outline(DrawContext context, int x, int y, int w, int h, int color) {
+    private static void outline(GuiGraphics context, int x, int y, int w, int h, int color) {
         context.fill(x, y, x + w, y + 1, color);
         context.fill(x, y + h - 1, x + w, y + h, color);
         context.fill(x, y, x + 1, y + h, color);

@@ -1,15 +1,14 @@
 package com.adhrit.capecreator.client;
 
 import com.adhrit.capecreator.CapeManager;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
-
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 /**
  * Pick the colours of the cape's inside and edges, each either Auto (the cape's main background
@@ -26,7 +25,7 @@ public class CapeSidesScreen extends Screen {
     private final Side edges = new Side("Edges", CapeManager::edgeColor, CapeManager::setEdgeColor, CapeManager::effectiveEdgeColor);
 
     public CapeSidesScreen(CapeEditorScreen parent) {
-        super(Text.literal("Cape Sides"));
+        super(Component.literal("Cape Sides"));
         this.parent = parent;
     }
 
@@ -37,8 +36,8 @@ public class CapeSidesScreen extends Screen {
         final Consumer<Integer> setter;
         final Supplier<Integer> effective;
         int x, y;
-        ButtonWidget autoButton;
-        TextFieldWidget hex;
+        Button autoButton;
+        EditBox hex;
         boolean updatingHex;
 
         Side(String label, Supplier<Integer> getter, Consumer<Integer> setter, Supplier<Integer> effective) {
@@ -51,14 +50,14 @@ public class CapeSidesScreen extends Screen {
         void init(int x, int y) {
             this.x = x;
             this.y = y;
-            autoButton = addDrawableChild(ButtonWidget.builder(Text.empty(), b -> {
+            autoButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
                 apply(getter.get() == null ? effective.get() : null);
                 refresh();
-            }).dimensions(x, y + 12, COLUMN_W, 20).build());
-            autoButton.setTooltip(Tooltip.of(Text.literal("Auto uses the cape's main background colour")));
-            hex = new TextFieldWidget(textRenderer, x + 22, paletteY() + 3 * SWATCH + 6, COLUMN_W - 22, 18, Text.literal(label + " hex"));
+            }).bounds(x, y + 12, COLUMN_W, 20).build());
+            autoButton.setTooltip(Tooltip.create(Component.literal("Auto uses the cape's main background colour")));
+            hex = new EditBox(font, x + 22, paletteY() + 3 * SWATCH + 6, COLUMN_W - 22, 18, Component.literal(label + " hex"));
             hex.setMaxLength(7);
-            hex.setChangedListener(text -> {
+            hex.setResponder(text -> {
                 if (updatingHex) return;
                 String h = text.startsWith("#") ? text.substring(1) : text;
                 if (h.length() == 6) {
@@ -69,7 +68,7 @@ public class CapeSidesScreen extends Screen {
                     }
                 }
             });
-            addDrawableChild(hex);
+            addRenderableWidget(hex);
             refresh();
         }
 
@@ -86,13 +85,13 @@ public class CapeSidesScreen extends Screen {
         }
 
         void refreshButton() {
-            autoButton.setMessage(Text.literal(getter.get() == null ? "Auto: On" : "Auto: Off"));
+            autoButton.setMessage(Component.literal(getter.get() == null ? "Auto: On" : "Auto: Off"));
         }
 
         void refresh() {
             refreshButton();
             updatingHex = true;
-            hex.setText(String.format("#%06X", effective.get() & 0xFFFFFF));
+            hex.setValue(String.format("#%06X", effective.get() & 0xFFFFFF));
             updatingHex = false;
         }
 
@@ -107,8 +106,8 @@ public class CapeSidesScreen extends Screen {
             return false;
         }
 
-        void render(DrawContext context) {
-            context.drawTextWithShadow(textRenderer, Text.literal(label), x, y, 0xFFFFFFFF);
+        void render(GuiGraphics context) {
+            context.drawString(font, Component.literal(label), x, y, 0xFFFFFFFF);
             int py = paletteY();
             int current = effective.get();
             for (int i = 0; i < CapeEditorScreen.PALETTE.length; i++) {
@@ -131,21 +130,21 @@ public class CapeSidesScreen extends Screen {
         int previewX1 = left + 2 * COLUMN_W + 28;
         preview.setBounds(previewX1, 30, width - 12, height - 32);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Done"), b -> close())
-                .dimensions(left, height - 26, 2 * COLUMN_W + 12, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose())
+                .bounds(left, height - 26, 2 * COLUMN_W + 12, 20).build());
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFFFF);
+        context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFFFF);
         inside.render(context);
         edges.render(context);
-        context.drawTextWithShadow(textRenderer, Text.literal("Main background: "), 16, height - 44, 0xFFA0A0A0);
-        int bx = 16 + textRenderer.getWidth("Main background: ");
+        context.drawString(font, Component.literal("Main background: "), 16, height - 44, 0xFFA0A0A0);
+        int bx = 16 + font.width("Main background: ");
         outline(context, bx, height - 46, 12, 12, 0xFFFFFFFF);
         context.fill(bx + 1, height - 45, bx + 11, height - 35, CapeManager.backgroundColor());
-        preview.render(context, textRenderer);
+        preview.render(context, font);
     }
 
     @Override
@@ -174,11 +173,11 @@ public class CapeSidesScreen extends Screen {
     }
 
     @Override
-    public void close() {
-        client.setScreen(parent);
+    public void onClose() {
+        minecraft.setScreen(parent);
     }
 
-    private static void outline(DrawContext context, int x, int y, int w, int h, int color) {
+    private static void outline(GuiGraphics context, int x, int y, int w, int h, int color) {
         context.fill(x, y, x + w, y + 1, color);
         context.fill(x, y + h - 1, x + w, y + h, color);
         context.fill(x, y, x + 1, y + h, color);

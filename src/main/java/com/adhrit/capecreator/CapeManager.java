@@ -1,12 +1,11 @@
 package com.adhrit.capecreator;
 
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
-
+import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.ResourceLocation;
+import com.mojang.blaze3d.platform.NativeImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -32,7 +31,7 @@ public final class CapeManager {
     public static final int[] FPS_OPTIONS = {1, 2, 4, 6, 8, 12, 16, 20};
     public static final int MAX_FRAMES = 64;
 
-    public static final Identifier TEXTURE_ID = Identifier.of(CapeCreatorClient.MOD_ID, "custom_cape");
+    public static final ResourceLocation TEXTURE_ID = ResourceLocation.fromNamespaceAndPath(CapeCreatorClient.MOD_ID, "custom_cape");
     private static final Path DIR = FabricLoader.getInstance().getConfigDir().resolve(CapeCreatorClient.MOD_ID);
     private static final Path DESIGN_FILE = DIR.resolve("design.png");
     private static final Path SETTINGS_FILE = DIR.resolve("settings.properties");
@@ -53,7 +52,7 @@ public final class CapeManager {
 
     private static Integer backgroundColor;   // cached; cleared whenever the design changes
 
-    private static NativeImageBackedTexture texture;
+    private static DynamicTexture texture;
     private static boolean dirty = true;
     private static int shownFrame = -1;
 
@@ -290,7 +289,7 @@ public final class CapeManager {
         int w = image.getWidth(), h = image.getHeight();
         int[] argb = new int[w * h];
         for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) argb[y * w + x] = image.getColorArgb(x, y);
+            for (int x = 0; x < w; x++) argb[y * w + x] = image.getPixel(x, y);
         }
         return argb;
     }
@@ -300,7 +299,7 @@ public final class CapeManager {
         int[] f = new int[w * h];
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                f[y * w + x] = 0xFF000000 | image.getColorArgb(x * image.getWidth() / w, top + y * regionH / h);
+                f[y * w + x] = 0xFF000000 | image.getPixel(x * image.getWidth() / w, top + y * regionH / h);
             }
         }
         return f;
@@ -309,8 +308,8 @@ public final class CapeManager {
     // ---- texture ----
 
     /** Called from the mixin; returns the texture to use as the local player's cape. */
-    public static Identifier getTextureId() {
-        int frame = frames.size() == 1 ? 0 : (int) ((Util.getMeasuringTimeMs() * fps / 1000) % frames.size());
+    public static ResourceLocation getTextureId() {
+        int frame = frames.size() == 1 ? 0 : (int) ((Util.getMillis() * fps / 1000) % frames.size());
         if (dirty || frame != shownFrame) rebuildTexture(frame);
         return TEXTURE_ID;
     }
@@ -320,14 +319,14 @@ public final class CapeManager {
         shownFrame = frame;
         int s = scale;
         int texW = 64 * s, texH = 32 * s;
-        if (texture == null || texture.getImage() == null
-                || texture.getImage().getWidth() != texW || texture.getImage().getHeight() != texH) {
-            texture = new NativeImageBackedTexture(() -> "capecreator custom cape", texW, texH, true);
+        if (texture == null || texture.getPixels() == null
+                || texture.getPixels().getWidth() != texW || texture.getPixels().getHeight() != texH) {
+            texture = new DynamicTexture(() -> "capecreator custom cape", texW, texH, true);
             // Smooth filtering suits detailed 8x/16x images; small pixel-art capes stay crisp.
             texture.setFilter(s >= 8, false);
-            MinecraftClient.getInstance().getTextureManager().registerTexture(TEXTURE_ID, texture);
+            Minecraft.getInstance().getTextureManager().register(TEXTURE_ID, texture);
         }
-        NativeImage img = texture.getImage();
+        NativeImage img = texture.getPixels();
         img.fillRect(0, 0, texW, texH, 0);
 
         int w = width(), h = height();
@@ -338,7 +337,7 @@ public final class CapeManager {
         // Outside of the cape (seen from behind the player): the design itself.
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                img.setColorArgb(s + x, s + y, get(frame, x, y));
+                img.setPixel(s + x, s + y, get(frame, x, y));
             }
         }
 
@@ -347,13 +346,13 @@ public final class CapeManager {
         int ex = 22 * s, ew = 24 * s, eh = 22 * s;
         for (int y = 0; y < eh; y++) {
             for (int x = 0; x < ew; x++) {
-                img.setColorArgb(ex + x, y, get(frame, x * w / ew, y * h / eh));
+                img.setPixel(ex + x, y, get(frame, x * w / ew, y * h / eh));
             }
         }
         int fx = 24 * s, fy = 2 * s, fw = 10 * s, fh = 20 * s;
         for (int y = 0; y < fh; y++) {
             for (int x = 0; x < fw; x++) {
-                img.setColorArgb(fx + x, fy + y, get(frame, x * w / fw, y * h / fh));
+                img.setPixel(fx + x, fy + y, get(frame, x * w / fw, y * h / fh));
             }
         }
 
@@ -454,11 +453,11 @@ public final class CapeManager {
             for (int i = 0; i < frames.size(); i++) {
                 for (int y = 0; y < h; y++) {
                     for (int x = 0; x < w; x++) {
-                        image.setColorArgb(x, i * h + y, get(i, x, y));
+                        image.setPixel(x, i * h + y, get(i, x, y));
                     }
                 }
             }
-            image.writeTo(file);
+            image.writeToFile(file);
         }
     }
 

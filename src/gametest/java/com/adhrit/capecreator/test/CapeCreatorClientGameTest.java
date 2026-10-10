@@ -5,8 +5,8 @@ import com.adhrit.capecreator.client.CapeEditorScreen;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.option.Perspective;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.gui.components.Button;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
@@ -49,17 +49,17 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             context.runOnClient(client -> {
                 int bg = CapeManager.backgroundColor();
                 check(bg == 0xFF2B4C9B, String.format("background should be the cape's blue, got %08X", bg));
-                var tex = (net.minecraft.client.texture.NativeImageBackedTexture)
+                var tex = (net.minecraft.client.renderer.texture.DynamicTexture)
                         client.getTextureManager().getTexture(CapeManager.getTextureId());
-                var img = tex.getImage();
+                var img = tex.getPixels();
                 int s = CapeManager.scale();
                 int[][] spots = {{12 * s + 5 * s, 8 * s}, {0, 5 * s}, {11 * s, 9 * s}, {5 * s, 0}, {15 * s, 0}};
                 for (int[] p : spots) {
-                    int got = img.getColorArgb(p[0], p[1]);
+                    int got = img.getPixel(p[0], p[1]);
                     check(got == bg, String.format("texture at %d,%d should be background %08X, got %08X", p[0], p[1], bg, got));
                 }
                 // the outside still shows the design (red cross)
-                check(img.getColorArgb(s + CapeManager.width() / 2, s + 1) == 0xFFFF0000, "outside should still show the design");
+                check(img.getPixel(s + CapeManager.width() / 2, s + 1) == 0xFFFF0000, "outside should still show the design");
             });
 
             // Import an animated GIF by "dropping" it on the screen, then check frames survive a save/load.
@@ -90,7 +90,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             }
             context.runOnClient(client -> {
                 CapeManager.State before = CapeManager.snapshot();
-                client.currentScreen.onFilesDropped(List.of(strip));
+                client.screen.onFilesDrop(List.of(strip));
                 check(CapeManager.frameCount() == 3, "strip should import 3 frames, got " + CapeManager.frameCount());
                 check(CapeManager.scale() == 1, "64-wide strip should be 1x, got " + CapeManager.scale());
                 int[] expected = {0xFFFF0000, 0xFF00FF00, 0xFF0000FF};
@@ -108,10 +108,10 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
 
             // Click "Save & Close" with the real mouse so input routing is tested, not just the button action.
             double[] pos = context.computeOnClient(client -> {
-                ButtonWidget save = client.currentScreen.children().stream()
-                        .filter(e -> e instanceof ButtonWidget b && b.getMessage().getString().equals("Save & Close"))
-                        .map(e -> (ButtonWidget) e).findFirst().orElseThrow();
-                double scale = client.getWindow().getScaleFactor();
+                Button save = client.screen.children().stream()
+                        .filter(e -> e instanceof Button b && b.getMessage().getString().equals("Save & Close"))
+                        .map(e -> (Button) e).findFirst().orElseThrow();
+                double scale = client.getWindow().getGuiScale();
                 return new double[]{(save.getX() + save.getWidth() / 2.0) * scale, (save.getY() + save.getHeight() / 2.0) * scale};
             });
             context.getInput().setCursorPos(pos[0], pos[1]);
@@ -119,8 +119,8 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             context.waitForScreen(null);
 
             context.runOnClient(client -> {
-                client.options.setPerspective(Perspective.THIRD_PERSON_BACK);
-                client.player.setPitch(20);
+                client.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                client.player.setXRot(20);
             });
             context.waitTicks(20);
             context.takeScreenshot("cape-in-world");
@@ -146,17 +146,17 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
 
             // Side view of the cape in the editor preview.
             context.setScreen(CapeEditorScreen::new);
-            context.<ReflectiveOperationException>runOnClient(client -> preview(client.currentScreen).setAngles(90f, -10f));
+            context.<ReflectiveOperationException>runOnClient(client -> preview(client.screen).setAngles(90f, -10f));
             context.waitTicks(2);
             context.takeScreenshot("cape-side-a");
             context.waitTicks(7);
             context.takeScreenshot("cape-side-b");
             // Real mouse drags on the 3D preview: right turns it like grabbing it (yaw goes down),
             // down tips the top towards you (pitch goes down, i.e. viewed from above).
-            context.<ReflectiveOperationException>runOnClient(client -> preview(client.currentScreen).setAngles(0f, -10f));
+            context.<ReflectiveOperationException>runOnClient(client -> preview(client.screen).setAngles(0f, -10f));
             double[] centre = context.computeOnClient(client -> {
-                double scale = client.getWindow().getScaleFactor();
-                return new double[]{(client.currentScreen.width - 60) * scale, client.currentScreen.height / 2.0 * scale};
+                double scale = client.getWindow().getGuiScale();
+                return new double[]{(client.screen.width - 60) * scale, client.screen.height / 2.0 * scale};
             });
             context.getInput().setCursorPos(centre[0], centre[1]);
             context.getInput().holdMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
@@ -166,7 +166,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             }
             context.getInput().releaseMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
             context.<ReflectiveOperationException>runOnClient(client -> {
-                float y = preview(client.currentScreen).yaw(), p = preview(client.currentScreen).pitch();
+                float y = preview(client.screen).yaw(), p = preview(client.screen).pitch();
                 check(y < -20, "dragging right should turn the preview (yaw down), yaw=" + y);
                 check(p < -20, "dragging down should tip the top towards you (pitch down), pitch=" + p);
             });
@@ -180,7 +180,7 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             context.waitForScreen(com.adhrit.capecreator.client.CapeSidesScreen.class);
             // click the red swatch (index 8: row 1, col 0) in the Inside palette with the real mouse
             double[] red = context.computeOnClient(client -> {
-                double scale = client.getWindow().getScaleFactor();
+                double scale = client.getWindow().getGuiScale();
                 int x = 16 + 6, y = 30 + 38 + 12 + 6;
                 return new double[]{x * scale, y * scale};
             });
@@ -193,28 +193,28 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             context.<ReflectiveOperationException>runOnClient(client -> {
                 var edgesField = com.adhrit.capecreator.client.CapeSidesScreen.class.getDeclaredField("edges");
                 edgesField.setAccessible(true);
-                Object edges = edgesField.get(client.currentScreen);
+                Object edges = edgesField.get(client.screen);
                 var hexField = edges.getClass().getDeclaredField("hex");
                 hexField.setAccessible(true);
-                ((net.minecraft.client.gui.widget.TextFieldWidget) hexField.get(edges)).setText("#00FF00");
+                ((net.minecraft.client.gui.components.EditBox) hexField.get(edges)).setValue("#00FF00");
             });
             context.waitTicks(3);
             context.runOnClient(client -> {
                 check(Integer.valueOf(0xFF00FF00).equals(CapeManager.edgeColor()), "typing #00FF00 should set edges");
-                var img = ((net.minecraft.client.texture.NativeImageBackedTexture)
-                        client.getTextureManager().getTexture(CapeManager.getTextureId())).getImage();
+                var img = ((net.minecraft.client.renderer.texture.DynamicTexture)
+                        client.getTextureManager().getTexture(CapeManager.getTextureId())).getPixels();
                 int s = CapeManager.scale();
-                check(img.getColorArgb(12 * s + 5 * s, 8 * s) == 0xFFFF0000, "inside should be red in the texture");
-                check(img.getColorArgb(0, 5 * s) == 0xFF00FF00, "left edge should be green in the texture");
-                check(img.getColorArgb(11 * s, 5 * s) == 0xFF00FF00, "right edge should be green in the texture");
+                check(img.getPixel(12 * s + 5 * s, 8 * s) == 0xFFFF0000, "inside should be red in the texture");
+                check(img.getPixel(0, 5 * s) == 0xFF00FF00, "left edge should be green in the texture");
+                check(img.getPixel(11 * s, 5 * s) == 0xFF00FF00, "right edge should be green in the texture");
             });
             context.takeScreenshot("sides-screen");
             clickButton(context, label -> label.equals("Done"));
             context.waitForScreen(CapeEditorScreen.class);
             // undo twice -> back to Auto
             context.runOnClient(client -> {
-                client.currentScreen.keyPressed(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL);
-                client.currentScreen.keyPressed(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL);
+                client.screen.keyPressed(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL);
+                client.screen.keyPressed(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL);
                 check(CapeManager.insideColor() == null && CapeManager.edgeColor() == null,
                         "undo should put sides back to Auto, got " + CapeManager.formatSideColor(CapeManager.insideColor())
                                 + " / " + CapeManager.formatSideColor(CapeManager.edgeColor()));
@@ -222,10 +222,10 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             context.runOnClient(client -> client.setScreen(null));
             context.waitTicks(30);
             context.takeScreenshot("cape-standing");
-            context.getInput().holdKey(options -> options.sprintKey);
-            context.getInput().holdKeyFor(options -> options.forwardKey, 25);
+            context.getInput().holdKey(options -> options.keySprint);
+            context.getInput().holdKeyFor(options -> options.keyUp, 25);
             context.takeScreenshot("cape-sprinting");
-            context.getInput().releaseKey(options -> options.sprintKey);
+            context.getInput().releaseKey(options -> options.keySprint);
             context.waitTicks(4);
             context.takeScreenshot("cape-just-stopped");
             world.getServer().runCommand("execute as @a at @s run tp @s ~ ~25 ~");
@@ -294,17 +294,17 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             try {
                 // a web page link should give a helpful error, not crash
                 context.setScreen(CapeEditorScreen::new);
-                context.runOnClient(client -> client.keyboard.setClipboard(base + "/page"));
+                context.runOnClient(client -> client.keyboardHandler.setClipboard(base + "/page"));
                 context.getInput().holdControl();
                 context.getInput().pressKey(GLFW.GLFW_KEY_V);
                 context.getInput().releaseControl();
                 context.waitForScreen(com.adhrit.capecreator.client.UrlImportScreen.class);
-                context.waitFor(client -> client.currentScreen instanceof com.adhrit.capecreator.client.UrlImportScreen
-                        && screenText(client.currentScreen).contains("web page"), 200);
+                context.waitFor(client -> client.screen instanceof com.adhrit.capecreator.client.UrlImportScreen
+                        && screenText(client.screen).contains("web page"), 200);
                 context.takeScreenshot("link-error");
 
                 // a real GIF link opens the crop screen
-                context.runOnClient(client -> client.keyboard.setClipboard(base + "/cape.gif"));
+                context.runOnClient(client -> client.keyboardHandler.setClipboard(base + "/cape.gif"));
                 context.setScreen(CapeEditorScreen::new);
                 context.getInput().holdControl();
                 context.getInput().pressKey(GLFW.GLFW_KEY_V);
@@ -388,10 +388,10 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
     /** Clicks the first button whose label matches, using the real mouse. */
     private static void clickButton(ClientGameTestContext context, java.util.function.Predicate<String> label) {
         double[] pos = context.computeOnClient(client -> {
-            ButtonWidget b = client.currentScreen.children().stream()
-                    .filter(e -> e instanceof ButtonWidget bw && label.test(bw.getMessage().getString()))
-                    .map(e -> (ButtonWidget) e).findFirst().orElseThrow();
-            double scale = client.getWindow().getScaleFactor();
+            Button b = client.screen.children().stream()
+                    .filter(e -> e instanceof Button bw && label.test(bw.getMessage().getString()))
+                    .map(e -> (Button) e).findFirst().orElseThrow();
+            double scale = client.getWindow().getGuiScale();
             return new double[]{(b.getX() + b.getWidth() / 2.0) * scale, (b.getY() + b.getHeight() / 2.0) * scale};
         });
         context.getInput().setCursorPos(pos[0], pos[1]);
@@ -399,11 +399,11 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
     }
 
     /** All text drawn by a screen's widgets plus its fields, for simple "did this message appear" checks. */
-    private static String screenText(net.minecraft.client.gui.screen.Screen screen) {
+    private static String screenText(net.minecraft.client.gui.screens.Screen screen) {
         try {
             var f = screen.getClass().getDeclaredField("status");
             f.setAccessible(true);
-            return ((net.minecraft.text.Text) f.get(screen)).getString();
+            return ((net.minecraft.network.chat.Component) f.get(screen)).getString();
         } catch (ReflectiveOperationException e) {
             return "";
         }
@@ -411,13 +411,13 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
 
     /** Drops a file on the editor, then accepts the default crop in the crop screen. */
     private static void dropAndCrop(ClientGameTestContext context, Path file) {
-        context.runOnClient(client -> client.currentScreen.onFilesDropped(List.of(file)));
+        context.runOnClient(client -> client.screen.onFilesDrop(List.of(file)));
         context.waitForScreen(com.adhrit.capecreator.client.CropScreen.class);
         clickButton(context, label -> label.equals("Use this crop"));
         context.waitForScreen(CapeEditorScreen.class);
     }
 
-    private static com.adhrit.capecreator.client.PlayerPreview preview(net.minecraft.client.gui.screen.Screen screen)
+    private static com.adhrit.capecreator.client.PlayerPreview preview(net.minecraft.client.gui.screens.Screen screen)
             throws ReflectiveOperationException {
         var f = screen.getClass().getDeclaredField("preview");
         f.setAccessible(true);

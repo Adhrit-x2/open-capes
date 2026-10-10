@@ -2,19 +2,18 @@ package com.adhrit.capecreator.client;
 
 import com.adhrit.capecreator.CapeCreatorClient;
 import com.adhrit.capecreator.CapeManager;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
-
+import com.mojang.blaze3d.platform.NativeImage;
 import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.Util;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Lets the player choose which part of an image becomes the cape. The crop box always has the
@@ -22,7 +21,7 @@ import java.util.function.Consumer;
  * underneath, with a live preview of the result.
  */
 public class CropScreen extends Screen {
-    private static final Identifier TEXTURE_ID = Identifier.of(CapeCreatorClient.MOD_ID, "crop_source");
+    private static final ResourceLocation TEXTURE_ID = ResourceLocation.fromNamespaceAndPath(CapeCreatorClient.MOD_ID, "crop_source");
 
     private final Screen parent;
     private final SourceImage source;
@@ -36,13 +35,13 @@ public class CropScreen extends Screen {
     private boolean dragging;
     private double dragOffsetX, dragOffsetY;
 
-    private NativeImageBackedTexture texture;
+    private DynamicTexture texture;
     private int shownFrame = -1;
 
     public record Result(List<int[]> frames, int width, int height, int fps) {}
 
     public CropScreen(Screen parent, SourceImage source, Consumer<Result> onDone) {
-        super(Text.literal("Crop your cape"));
+        super(Component.literal("Crop your cape"));
         this.parent = parent;
         this.source = source;
         this.onDone = onDone;
@@ -96,21 +95,21 @@ public class CropScreen extends Screen {
         previewY = 30;
 
         int y = previewY + previewH + 22;
-        addDrawableChild(ButtonWidget.builder(Text.literal("-"), b -> resize(1.15f)).dimensions(px, y, 34, 20).build())
-                .setTooltip(Tooltip.of(Text.literal("Zoom out (bigger box, shows more of the image)")));
-        addDrawableChild(ButtonWidget.builder(Text.literal("Fit"), b -> fit()).dimensions(px + 36, y, 34, 20).build())
-                .setTooltip(Tooltip.of(Text.literal("Biggest box that fits, centred")));
-        addDrawableChild(ButtonWidget.builder(Text.literal("+"), b -> resize(1 / 1.15f)).dimensions(px + 72, y, 34, 20).build())
-                .setTooltip(Tooltip.of(Text.literal("Zoom in (smaller box, more detail)")));
-        addDrawableChild(ButtonWidget.builder(Text.literal("Use this crop"), b -> finish())
-                .dimensions(px, height - 50, 106, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> close())
-                .dimensions(px, height - 26, 106, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("-"), b -> resize(1.15f)).bounds(px, y, 34, 20).build())
+                .setTooltip(Tooltip.create(Component.literal("Zoom out (bigger box, shows more of the image)")));
+        addRenderableWidget(Button.builder(Component.literal("Fit"), b -> fit()).bounds(px + 36, y, 34, 20).build())
+                .setTooltip(Tooltip.create(Component.literal("Biggest box that fits, centred")));
+        addRenderableWidget(Button.builder(Component.literal("+"), b -> resize(1 / 1.15f)).bounds(px + 72, y, 34, 20).build())
+                .setTooltip(Tooltip.create(Component.literal("Zoom in (smaller box, more detail)")));
+        addRenderableWidget(Button.builder(Component.literal("Use this crop"), b -> finish())
+                .bounds(px, height - 50, 106, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose())
+                .bounds(px, height - 26, 106, 20).build());
 
         if (texture == null) {
-            texture = new NativeImageBackedTexture(() -> "capecreator crop source", source.width(), source.height(), false);
+            texture = new DynamicTexture(() -> "capecreator crop source", source.width(), source.height(), false);
             texture.setFilter(true, false);
-            client.getTextureManager().registerTexture(TEXTURE_ID, texture);
+            minecraft.getTextureManager().register(TEXTURE_ID, texture);
             shownFrame = -1;
         }
     }
@@ -132,26 +131,26 @@ public class CropScreen extends Screen {
 
     private void updateTexture() {
         int frame = source.frames().size() == 1 ? 0
-                : (int) ((Util.getMeasuringTimeMs() * source.fps() / 1000) % source.frames().size());
+                : (int) ((Util.getMillis() * source.fps() / 1000) % source.frames().size());
         if (frame == shownFrame) return;
         shownFrame = frame;
-        NativeImage img = texture.getImage();
+        NativeImage img = texture.getPixels();
         int[] px = source.frames().get(frame);
         for (int y = 0; y < source.height(); y++) {
             for (int x = 0; x < source.width(); x++) {
-                img.setColorArgb(x, y, 0xFF000000 | px[y * source.width() + x]);
+                img.setPixel(x, y, 0xFF000000 | px[y * source.width() + x]);
             }
         }
         texture.upload();
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
         updateTexture();
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFFFF);
+        context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFFFF);
 
-        context.drawTexture(RenderLayer::getGuiTextured, TEXTURE_ID, viewX, viewY, 0, 0, viewW, viewH,
+        context.blit(RenderType::guiTextured, TEXTURE_ID, viewX, viewY, 0, 0, viewW, viewH,
                 source.width(), source.height(), source.width(), source.height());
 
         // dim everything outside the crop box, then outline it
@@ -165,16 +164,16 @@ public class CropScreen extends Screen {
         outline(context, bx1 - 1, by1 - 1, bx2 - bx1 + 2, by2 - by1 + 2, 0xFFFFFFFF);
 
         // live preview of the cape
-        context.drawTextWithShadow(textRenderer, Text.literal("Preview"), previewX, previewY - 11, 0xFFA0A0A0);
+        context.drawString(font, Component.literal("Preview"), previewX, previewY - 11, 0xFFA0A0A0);
         outline(context, previewX - 1, previewY - 1, previewW + 2, previewH + 2, 0xFFFFFFFF);
-        context.drawTexture(RenderLayer::getGuiTextured, TEXTURE_ID, previewX, previewY, cropX, cropY,
+        context.blit(RenderType::guiTextured, TEXTURE_ID, previewX, previewY, cropX, cropY,
                 previewW, previewH, Math.round(cropW), Math.round(cropH()), source.width(), source.height());
 
         int s = outputScale();
-        context.drawTextWithShadow(textRenderer, Text.literal("Quality: " + s + "x"), width - 122, previewY + previewH + 8, 0xFFA0A0A0);
-        context.drawTextWithShadow(textRenderer, Text.literal(source.frames().size() + " frame" + (source.frames().size() == 1 ? "" : "s")),
+        context.drawString(font, Component.literal("Quality: " + s + "x"), width - 122, previewY + previewH + 8, 0xFFA0A0A0);
+        context.drawString(font, Component.literal(source.frames().size() + " frame" + (source.frames().size() == 1 ? "" : "s")),
                 width - 122, previewY + previewH + 48, 0xFFA0A0A0);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("Drag the box to move it, scroll to resize"),
+        context.drawCenteredString(font, Component.literal("Drag the box to move it, scroll to resize"),
                 viewX + viewW / 2, height - 20, 0xFFA0A0A0);
     }
 
@@ -229,19 +228,19 @@ public class CropScreen extends Screen {
     }
 
     @Override
-    public void close() {
-        client.setScreen(parent);
+    public void onClose() {
+        minecraft.setScreen(parent);
     }
 
     @Override
     public void removed() {
         if (texture != null) {
-            client.getTextureManager().destroyTexture(TEXTURE_ID);
+            minecraft.getTextureManager().release(TEXTURE_ID);
             texture = null;
         }
     }
 
-    private static void outline(DrawContext context, int x, int y, int w, int h, int color) {
+    private static void outline(GuiGraphics context, int x, int y, int w, int h, int color) {
         context.fill(x, y, x + w, y + 1, color);
         context.fill(x, y + h - 1, x + w, y + h, color);
         context.fill(x, y, x + 1, y + h, color);

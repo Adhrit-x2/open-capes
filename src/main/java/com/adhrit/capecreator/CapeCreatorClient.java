@@ -1,13 +1,13 @@
 package com.adhrit.capecreator;
 
 import com.adhrit.capecreator.client.CapeEditorScreen;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.Text;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,46 +16,46 @@ public class CapeCreatorClient implements ClientModInitializer {
     public static final String MOD_ID = "capecreator";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    private static KeyBinding openEditorKey;
-    private static KeyBinding nextCapeKey;
-    private static KeyBinding previousCapeKey;
+    private static KeyMapping openEditorKey;
+    private static KeyMapping nextCapeKey;
+    private static KeyMapping previousCapeKey;
 
     @Override
     public void onInitializeClient() {
         CapeManager.load();
 
-        openEditorKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        openEditorKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.capecreator.open",
-                InputUtil.Type.KEYSYM,
+                InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_J,
                 "category.capecreator"));
 
-        nextCapeKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.capecreator.next", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_BRACKET, "category.capecreator"));
-        previousCapeKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.capecreator.previous", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_BRACKET, "category.capecreator"));
+        nextCapeKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.capecreator.next", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_BRACKET, "category.capecreator"));
+        previousCapeKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.capecreator.previous", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_BRACKET, "category.capecreator"));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openEditorKey.wasPressed()) {
-                if (client.currentScreen == null) {
+            while (openEditorKey.consumeClick()) {
+                if (client.screen == null) {
                     client.setScreen(new CapeEditorScreen());
                 }
             }
-            while (nextCapeKey.wasPressed()) cycleSavedCape(client, 1);
-            while (previousCapeKey.wasPressed()) cycleSavedCape(client, -1);
+            while (nextCapeKey.consumeClick()) cycleSavedCape(client, 1);
+            while (previousCapeKey.consumeClick()) cycleSavedCape(client, -1);
         });
     }
 
-    private static void cycleSavedCape(MinecraftClient client, int direction) {
+    private static void cycleSavedCape(Minecraft client, int direction) {
         if (client.player == null) return;
         try {
             CapeLibrary.Entry entry = CapeLibrary.cycle(direction);
-            client.player.sendMessage(Text.literal(entry == null
+            client.player.displayClientMessage(Component.literal(entry == null
                     ? "No saved capes yet - press J, then Saved, to save one"
                     : "Cape: " + entry.name()), true);
         } catch (Exception e) {
             LOGGER.warn("Could not switch cape", e);
-            client.player.sendMessage(Text.literal("Couldn't load that cape"), true);
+            client.player.displayClientMessage(Component.literal("Couldn't load that cape"), true);
         }
     }
 }

@@ -2,14 +2,6 @@ package com.adhrit.capecreator.client;
 
 import com.adhrit.capecreator.CapeCreatorClient;
 import com.adhrit.capecreator.CapeLibrary;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.toast.SystemToast;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Util;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +12,13 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import net.minecraft.Util;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 /** Paste a link to a GIF or image; it's downloaded in the background and opened in the crop screen. */
 public class UrlImportScreen extends Screen {
@@ -32,13 +31,13 @@ public class UrlImportScreen extends Screen {
     private final Screen parent;
     private final Consumer<CropScreen.Result> onDone;
     private final String initialUrl;
-    private TextFieldWidget urlField;
-    private ButtonWidget loadButton;
-    private Text status = Text.empty();
+    private EditBox urlField;
+    private Button loadButton;
+    private Component status = Component.empty();
     private boolean loading;
 
     public UrlImportScreen(Screen parent, String initialUrl, Consumer<CropScreen.Result> onDone) {
-        super(Text.literal("Import from a link"));
+        super(Component.literal("Import from a link"));
         this.parent = parent;
         this.initialUrl = initialUrl == null ? "" : initialUrl;
         this.onDone = onDone;
@@ -53,45 +52,45 @@ public class UrlImportScreen extends Screen {
     @Override
     protected void init() {
         int w = Math.min(360, width - 40);
-        urlField = new TextFieldWidget(textRenderer, (width - w) / 2, height / 2 - 30, w, 20, Text.literal("Link"));
+        urlField = new EditBox(font, (width - w) / 2, height / 2 - 30, w, 20, Component.literal("Link"));
         urlField.setMaxLength(2048);
-        urlField.setPlaceholder(Text.literal("Paste a GIF or image link (Ctrl/Cmd+V)"));
-        if (urlField.getText().isEmpty()) urlField.setText(initialUrl);
-        addDrawableChild(urlField);
+        urlField.setHint(Component.literal("Paste a GIF or image link (Ctrl/Cmd+V)"));
+        if (urlField.getValue().isEmpty()) urlField.setValue(initialUrl);
+        addRenderableWidget(urlField);
         setInitialFocus(urlField);
 
-        loadButton = addDrawableChild(ButtonWidget.builder(Text.literal("Load"), b -> load())
-                .dimensions(width / 2 - 102, height / 2 + 4, 100, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), b -> close())
-                .dimensions(width / 2 + 2, height / 2 + 4, 100, 20).build());
+        loadButton = addRenderableWidget(Button.builder(Component.literal("Load"), b -> load())
+                .bounds(width / 2 - 102, height / 2 + 4, 100, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose())
+                .bounds(width / 2 + 2, height / 2 + 4, 100, 20).build());
 
         if (looksLikeUrl(initialUrl) && !loading && status.getString().isEmpty()) load();
     }
 
     private void load() {
-        String url = urlField.getText().trim();
+        String url = urlField.getValue().trim();
         if (!looksLikeUrl(url)) {
-            status = Text.literal("That doesn't look like a link (it should start with https://)");
+            status = Component.literal("That doesn't look like a link (it should start with https://)");
             return;
         }
         loading = true;
         loadButton.active = false;
-        status = Text.literal("Downloading...");
+        status = Component.literal("Downloading...");
         CompletableFuture.supplyAsync(() -> {
             try {
                 return SourceImage.decode(download(url));
             } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e.getMessage(), e);
             }
-        }, Util.getDownloadWorkerExecutor()).whenComplete((source, error) -> client.execute(() -> {
+        }, Util.nonCriticalIoPool()).whenComplete((source, error) -> minecraft.execute(() -> {
             loading = false;
             if (loadButton != null) loadButton.active = true;
             if (error != null) {
                 CapeCreatorClient.LOGGER.warn("Could not import cape from {}", url, error);
                 Throwable cause = error.getCause() != null ? error.getCause() : error;
-                status = Text.literal(cause.getMessage() == null ? "Download failed" : cause.getMessage());
-            } else if (client.currentScreen == this) {
-                client.setScreen(new CropScreen(parent, source, result -> {
+                status = Component.literal(cause.getMessage() == null ? "Download failed" : cause.getMessage());
+            } else if (minecraft.screen == this) {
+                minecraft.setScreen(new CropScreen(parent, source, result -> {
                     onDone.accept(result);
                     saveToLibrary(url);
                 }));
@@ -103,12 +102,12 @@ public class UrlImportScreen extends Screen {
     private void saveToLibrary(String url) {
         try {
             CapeLibrary.Entry entry = CapeLibrary.addCurrent(CapeLibrary.uniqueName(CapeLibrary.nameFromUrl(url)));
-            SystemToast.show(client.getToastManager(), SystemToast.Type.PERIODIC_NOTIFICATION,
-                    Text.literal("Cape saved"), Text.literal("Added \"" + entry.name() + "\" to your saved capes"));
+            SystemToast.addOrUpdate(minecraft.getToastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+                    Component.literal("Cape saved"), Component.literal("Added \"" + entry.name() + "\" to your saved capes"));
         } catch (Exception e) {
             CapeCreatorClient.LOGGER.warn("Could not save imported cape", e);
-            SystemToast.show(client.getToastManager(), SystemToast.Type.PERIODIC_NOTIFICATION,
-                    Text.literal("Couldn't save cape"), Text.literal(String.valueOf(e.getMessage())));
+            SystemToast.addOrUpdate(minecraft.getToastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
+                    Component.literal("Couldn't save cape"), Component.literal(String.valueOf(e.getMessage())));
         }
     }
 
@@ -146,18 +145,18 @@ public class UrlImportScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, height / 2 - 52, 0xFFFFFFFF);
+        context.drawCenteredString(font, title, width / 2, height / 2 - 52, 0xFFFFFFFF);
         int y = height / 2 + 34;
-        for (var line : textRenderer.wrapLines(status, Math.min(360, width - 40))) {
-            context.drawCenteredTextWithShadow(textRenderer, line, width / 2, y, loading ? 0xFFA0A0A0 : 0xFFFF8080);
+        for (var line : font.split(status, Math.min(360, width - 40))) {
+            context.drawCenteredString(font, line, width / 2, y, loading ? 0xFFA0A0A0 : 0xFFFF8080);
             y += 10;
         }
     }
 
     @Override
-    public void close() {
-        client.setScreen(parent);
+    public void onClose() {
+        minecraft.setScreen(parent);
     }
 }
