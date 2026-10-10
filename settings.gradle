@@ -5,4 +5,26 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 rootProject.name = 'cape-creator'
+
+// One subproject per Minecraft version, from versions/<mc>/gradle.properties.
+// Build just some of them with -Pmc=1.21.5,26.2 (handy while working on one version).
+def only = providers.gradleProperty('mc').orNull?.tokenize(',')*.trim()
+file('versions').listFiles()
+        .findAll { it.isDirectory() && new File(it, 'gradle.properties').exists() }
+        .findAll { only == null || only.contains(it.name) }
+        .sort { a, b -> compareMc(a.name, b.name) }
+        .each { dir ->
+            include(":${dir.name}")
+            project(":${dir.name}").projectDir = dir
+        }
+
+static int compareMc(String a, String b) {
+    def x = a.tokenize('.')*.toInteger(), y = b.tokenize('.')*.toInteger()
+    for (int i = 0; i < Math.max(x.size(), y.size()); i++) {
+        int c = (i < x.size() ? x[i] : 0) <=> (i < y.size() ? y[i] : 0)
+        if (c != 0) return c
+    }
+    return 0
+}

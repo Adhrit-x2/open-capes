@@ -1,43 +1,195 @@
 plugins {
-    id 'fabric-loom' version '1.13.6'
+    // 1.21.x is obfuscated and needs remapping; 26.x ships unobfuscated and uses the non-remapping plugin.
+    id 'fabric-loom' version '1.18.3' apply false
+    id 'net.fabricmc.fabric-loom' version '1.18.3' apply false
 }
 
-version = project.mod_version
-group = project.maven_group
+/*
+ * Multi-version builds
+ * --------------------
+ * There is one copy of the code in src/. Version-specific parts are marked like this:
+ *
+ *     //#if MC >= 1.21.6
+ *     ... code for 1.21.6 and newer ...
+ *     //#elif MC >= 1.21.2
+ *     ... code for 1.21.2 - 1.21.5 ...
+ *     //#else
+ *     ... code for older versions ...
+ *     //#endif
+ *
+ * Conditions compare MC against a version with >=, >, <=, <, ==, != and can be combined with
+ * && and ||. Blocks can be nested. Each versions/<mc> subproject preprocesses src/ into its own
+ * build directory (inactive lines become blank so compiler line numbers still match) and builds
+ * a jar for exactly that Minecraft version.
+ */
 
-base {
-    archivesName = project.archives_base_name
+static List<Integer> parseMc(String v) { v.tokenize('.')*.toInteger() }
+
+static int compareMc(List<Integer> a, List<Integer> b) {
+    for (int i = 0; i < Math.max(a.size(), b.size()); i++) {
+        int c = (i < a.size() ? a[i] : 0) <=> (i < b.size() ? b[i] : 0)
+        if (c != 0) return c
+    }
+    return 0
 }
 
-dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings loom.officialMojangMappings()
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-}
-
-processResources {
-    inputs.property "version", project.version
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
+static boolean evalCondition(String condition, List<Integer> mc, String where) {
+    return condition.split(/\|\|/).any { orPart ->
+        orPart.split(/&&/).every { term ->
+            def m = term.trim() =~ /^MC\s*(>=|<=|==|!=|>|<)\s*([0-9]+(?:\.[0-9]+)*)$/
+            if (!m.matches()) throw new GradleException("Bad preprocessor condition '${term.trim()}' at ${where}")
+            int c = compareMc(mc, parseMc(m.group(2)))
+            switch (m.group(1)) {
+                case '>=': return c >= 0
+                case '<=': return c <= 0
+                case '>': return c > 0
+                case '<': return c < 0
+                case '==': return c == 0
+                default: return c != 0
+            }
+        }
     }
 }
 
-tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+static String preprocess(String text, List<Integer> mc, String fileName) {
+    // stack entries: [enclosingActive, anyBranchTaken, thisBranchActive]
+    def stack = []
+    boolean active = true
+    def out = new StringBuilder()
+    text.readLines().eachWithIndex { String line, int i ->
+        def where = "${fileName}:${i + 1}"
+        def t = line.trim()
+        if (t.startsWith('//#if ')) {
+            boolean cond = active && evalCondition(t.substring(6), mc, where)
+            stack.push([active, cond, cond])
+            active = cond
+            out.append('\n')
+        } else if (t.startsWith('//#elif ')) {
+            if (stack.isEmpty()) throw new GradleException("//#elif without //#if at ${where}")
+            def top = stack.pop()
+            boolean cond = top[0] && !top[1] && evalCondition(t.substring(8), mc, where)
+            stack.push([top[0], top[1] || cond, cond])
+            active = cond
+            out.append('\n')
+        } else if (t == '//#else') {
+            if (stack.isEmpty()) throw new GradleException("//#else without //#if at ${where}")
+            def top = stack.pop()
+            boolean cond = top[0] && !top[1]
+            stack.push([top[0], true, cond])
+            active = cond
+            out.append('\n')
+        } else if (t == '//#endif') {
+            if (stack.isEmpty()) throw new GradleException("//#endif without //#if at ${where}")
+            active = stack.pop()[0]
+            out.append('\n')
+        } else {
+            out.append(active ? line : '').append('\n')
+        }
+    }
+    if (!stack.isEmpty()) throw new GradleException("Missing //#endif in ${fileName}")
+    return out.toString()
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+subprojects { p ->
+    boolean obfuscated = p.property('obfuscated').toString().toBoolean()
+    apply plugin: obfuscated ? 'fabric-loom' : 'net.fabricmc.fabric-loom'
+
+    def mcVersion = p.property('minecraft_version').toString()
+    def mc = parseMc(mcVersion)
+    int javaVersion = p.property('java_version').toString().toInteger()
+    // Fabric's client game test API exists from 1.21.4
+    boolean clientGameTests = compareMc(mc, [1, 21, 4]) >= 0
+
+    version = "${rootProject.mod_version}+mc${mcVersion}"
+    group = rootProject.maven_group
+    base { archivesName = rootProject.archives_base_name }
+
+    def preprocessed = p.layout.buildDirectory.dir('preprocessed')
+    def preprocess = tasks.register('preprocessSources') {
+        def sources = ['main', 'gametest']
+        sources.each { inputs.dir(rootProject.file("src/${it}/java")).withPropertyName("src_${it}") }
+        inputs.property('mc', mcVersion)
+        outputs.dir(preprocessed)
+        doLast {
+            def outRoot = preprocessed.get().asFile
+            project.delete(outRoot)
+            sources.each { set ->
+                def srcRoot = rootProject.file("src/${set}/java")
+                project.fileTree(srcRoot).matching { include '**/*.java' }.visit { f ->
+                    if (f.directory) return
+                    def target = new File(outRoot, "${set}/java/${f.relativePath.pathString}")
+                    target.parentFile.mkdirs()
+                    target.text = preprocess(f.file.getText('UTF-8'), mc, f.relativePath.pathString)
+                }
+            }
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = [preprocessed.map { it.dir('main/java') }]
+            resources.srcDirs = [rootProject.file('src/main/resources')]
+        }
+    }
+
+    repositories {
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+        mavenCentral()
+    }
+
+    dependencies {
+        minecraft "com.mojang:minecraft:${mcVersion}"
+        if (obfuscated) {
+            mappings loom.officialMojangMappings()
+            modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+            modImplementation "net.fabricmc.fabric-api:fabric-api:${p.property('fabric_api_version')}"
+        } else {
+            implementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+            implementation "net.fabricmc.fabric-api:fabric-api:${p.property('fabric_api_version')}"
+        }
+    }
+
+    if (clientGameTests) {
+        fabricApi {
+            configureTests {
+                createSourceSet = true
+                modId = 'capecreator-test'
+                enableGameTests = false
+                enableClientGameTests = true
+                eula = true
+            }
+        }
+        sourceSets {
+            gametest {
+                java.srcDirs = [preprocessed.map { it.dir('gametest/java') }]
+                resources.srcDirs = [rootProject.file('src/gametest/resources')]
+            }
+        }
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        dependsOn preprocess
+        options.release = javaVersion
+        options.encoding = 'UTF-8'
+    }
+
+    processResources {
+        def props = [version: p.version, minecraft: mcVersion, java: javaVersion]
+        inputs.properties(props)
+        filesMatching(['fabric.mod.json', 'capecreator.mixins.json']) { expand(props) }
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.toVersion(javaVersion)
+        targetCompatibility = JavaVersion.toVersion(javaVersion)
+    }
 }
 
-fabricApi {
-    configureTests {
-        createSourceSet = true
-        modId = "capecreator-test"
-        enableGameTests = false
-        enableClientGameTests = true
-        eula = true
+// Builds every version and collects the jars in dist/
+tasks.register('dist', Sync) {
+    into layout.projectDirectory.dir('dist')
+    subprojects.each { p ->
+        def jarTask = p.tasks.findByName('remapJar') ?: p.tasks.named('jar').get()
+        from(jarTask)
     }
 }

@@ -7,3 +7,4 @@ dist/
 out/
 run/
 .DS_Store
+versions/*/run/
