@@ -1,9 +1,9 @@
-# Cape Creator
+# Open Capes
 
 A client-side Fabric mod for Minecraft. You design a cape in a pixel editor in-game and wear it.
 
 ## Supported versions
-Every Minecraft release from **1.21 to 1.21.11** and **26.1 to 26.3**, on Fabric with Fabric API. Each Minecraft version has its own jar, `cape-creator-<version>+mc<minecraft>.jar`, so use the one that matches your game.
+Every Minecraft release from **1.21 to 1.21.11** and **26.1 to 26.3**, on Fabric with Fabric API. Each Minecraft version has its own jar, `open-capes-<version>+mc<minecraft>.jar`, so use the one that matches your game.
 
 ## Use
 - Press **J** in-game to open the editor. You can rebind it under Controls → Cape Creator.

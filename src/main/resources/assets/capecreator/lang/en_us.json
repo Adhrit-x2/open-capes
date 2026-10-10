@@ -1,8 +1,8 @@
 {
-  "category.capecreator": "Cape Creator",
+  "category.capecreator": "Open Capes",
   "key.capecreator.open": "Open Cape Editor",
   "key.capecreator.next": "Next Saved Cape",
   "key.capecreator.previous": "Previous Saved Cape",
-  "screen.capecreator.title": "Cape Creator",
-  "key.category.capecreator.main": "Cape Creator"
+  "screen.capecreator.title": "Open Capes",
+  "key.category.capecreator.main": "Open Capes"
 }

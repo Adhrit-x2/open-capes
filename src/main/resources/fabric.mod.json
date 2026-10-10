@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "capecreator",
   "version": "${version}",
-  "name": "Cape Creator",
+  "name": "Open Capes",
   "description": "Design your own cape in an in-game pixel editor and wear it.",
   "authors": ["Adhrit"],
   "license": "MIT",

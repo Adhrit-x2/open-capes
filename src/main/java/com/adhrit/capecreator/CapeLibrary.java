@@ -71,7 +71,7 @@ public final class CapeLibrary {
         props.setProperty("inside", CapeManager.formatSideColor(CapeManager.insideColor()));
         props.setProperty("edges", CapeManager.formatSideColor(CapeManager.edgeColor()));
         try (Writer w = Files.newBufferedWriter(DIR.resolve(name + ".properties"))) {
-            props.store(w, "Cape Creator saved cape");
+            props.store(w, "Open Capes saved cape");
         }
         CapeManager.setCurrentName(name);
         return new Entry(name, png);
@@ -113,7 +113,7 @@ public final class CapeLibrary {
         p.setProperty("inside", CapeManager.formatSideColor(CapeManager.insideColor()));
         p.setProperty("edges", CapeManager.formatSideColor(CapeManager.edgeColor()));
         try (Writer w = Files.newBufferedWriter(file)) {
-            p.store(w, "Cape Creator saved cape");
+            p.store(w, "Open Capes saved cape");
         }
     }
 

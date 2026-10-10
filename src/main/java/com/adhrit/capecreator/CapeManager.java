@@ -471,7 +471,7 @@ public final class CapeManager {
             props.setProperty("inside", formatSideColor(insideColor));
             props.setProperty("edges", formatSideColor(edgeColor));
             try (Writer wr = Files.newBufferedWriter(SETTINGS_FILE)) {
-                props.store(wr, "Cape Creator settings");
+                props.store(wr, "Open Capes settings");
             }
         } catch (IOException e) {
             CapeCreatorClient.LOGGER.error("Failed to save cape design", e);

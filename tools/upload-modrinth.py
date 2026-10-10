@@ -24,7 +24,7 @@ API = "https://api.modrinth.com/v2"
 USER_AGENT = "adhrit/cape-creator-uploader (github.com/adhrit)"
 FABRIC_API = "P7dR8mSH"  # Fabric API's Modrinth project id
 DIST = Path(__file__).resolve().parent.parent / "dist"
-JAR_NAME = re.compile(r"^cape-creator-(?P<mod>[\d.]+)\+mc(?P<mc>[\d.]+)\.jar$")
+JAR_NAME = re.compile(r"^open-capes-(?P<mod>[\d.]+)\+mc(?P<mc>[\d.]+)\.jar$")
 
 
 def token():
