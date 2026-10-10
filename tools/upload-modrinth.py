@@ -75,6 +75,8 @@ def main():
     ap.add_argument("--publish", action="store_true", help="actually upload (default is a dry run)")
     ap.add_argument("--changelog", default="Initial release.")
     ap.add_argument("--type", default="release", choices=["release", "beta", "alpha"])
+    ap.add_argument("--environment", default="client_only",
+                    help="Modrinth environment for the version (this mod is client-side only)")
     ap.add_argument("--assume-new", action="store_true",
                     help="don't list existing versions (for tokens without the 'Read versions' scope); "
                          "only use when you know these version numbers aren't uploaded yet")
@@ -116,9 +118,10 @@ def main():
             "project_id": project["id"],
             "file_parts": ["file"],
             "primary_file": "file",
+            "environment": args.environment,
         }
         if not args.publish:
-            print(f"  would upload {jar.name}: MC {mc}, fabric, requires Fabric API")
+            print(f"  would upload {jar.name}: MC {mc}, fabric, requires Fabric API, {args.environment}")
             continue
         body, ctype = multipart(data, jar)
         v = request("POST", "/version", auth, body, ctype)
