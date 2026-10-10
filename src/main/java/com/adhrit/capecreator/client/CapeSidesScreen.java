@@ -14,7 +14,7 @@ import net.minecraft.network.chat.Component;
  * Pick the colours of the cape's inside and edges, each either Auto (the cape's main background
  * colour) or a custom colour, with a 3D preview angled to show them.
  */
-public class CapeSidesScreen extends Screen {
+public class CapeSidesScreen extends CompatScreen {
     private static final int SWATCH = 12;
     private static final int COLUMN_W = 8 * SWATCH;
 
@@ -148,22 +148,22 @@ public class CapeSidesScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+    protected boolean onMouseClicked(double mouseX, double mouseY, int button) {
+        if (superMouseClicked(mouseX, mouseY, button)) return true;
         if (button == 0 && (inside.click(mouseX, mouseY) || edges.click(mouseX, mouseY))) return true;
         return preview.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+    protected boolean onMouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (preview.mouseDragged(deltaX, deltaY)) return true;
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        return superMouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    protected boolean onMouseReleased(double mouseX, double mouseY, int button) {
         preview.mouseReleased();
-        return super.mouseReleased(mouseX, mouseY, button);
+        return superMouseReleased(mouseX, mouseY, button);
     }
 
     @Override

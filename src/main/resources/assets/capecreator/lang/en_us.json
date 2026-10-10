@@ -3,5 +3,6 @@
   "key.capecreator.open": "Open Cape Editor",
   "key.capecreator.next": "Next Saved Cape",
   "key.capecreator.previous": "Previous Saved Cape",
-  "screen.capecreator.title": "Cape Creator"
+  "screen.capecreator.title": "Cape Creator",
+  "key.category.capecreator.main": "Cape Creator"
 }

@@ -213,8 +213,13 @@ public class CapeCreatorClientGameTest implements FabricClientGameTest {
             context.waitForScreen(CapeEditorScreen.class);
             // undo twice -> back to Auto
             context.runOnClient(client -> {
+                //#if MC >= 1.21.9
+                client.screen.keyPressed(new net.minecraft.client.input.KeyEvent(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL));
+                client.screen.keyPressed(new net.minecraft.client.input.KeyEvent(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL));
+                //#else
                 client.screen.keyPressed(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL);
                 client.screen.keyPressed(GLFW.GLFW_KEY_Z, 0, GLFW.GLFW_MOD_CONTROL);
+                //#endif
                 check(CapeManager.insideColor() == null && CapeManager.edgeColor() == null,
                         "undo should put sides back to Auto, got " + CapeManager.formatSideColor(CapeManager.insideColor())
                                 + " / " + CapeManager.formatSideColor(CapeManager.edgeColor()));

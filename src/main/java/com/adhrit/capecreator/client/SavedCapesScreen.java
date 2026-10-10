@@ -26,7 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /** Grid of saved capes: click one to wear it, save the current cape, or delete one. */
-public class SavedCapesScreen extends Screen {
+public class SavedCapesScreen extends CompatScreen {
     private static final int THUMB_W = 40, THUMB_H = 64, TILE_W = 48, TILE_H = 72;
 
     private List<CapeLibrary.Entry> entries = List.of();
@@ -178,8 +178,8 @@ public class SavedCapesScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+    protected boolean onMouseClicked(double mouseX, double mouseY, int button) {
+        if (superMouseClicked(mouseX, mouseY, button)) return true;
         int i = tileAt(mouseX, mouseY);
         if (i >= 0 && button == 0) {
             try {

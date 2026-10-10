@@ -1,7 +1,6 @@
 package com.adhrit.capecreator;
 
 import com.adhrit.capecreator.client.CapeEditorScreen;
-import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -24,16 +23,9 @@ public class CapeCreatorClient implements ClientModInitializer {
     public void onInitializeClient() {
         CapeManager.load();
 
-        openEditorKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.capecreator.open",
-                InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_J,
-                "category.capecreator"));
-
-        nextCapeKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.capecreator.next", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_BRACKET, "category.capecreator"));
-        previousCapeKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.capecreator.previous", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_BRACKET, "category.capecreator"));
+        openEditorKey = KeyBindingHelper.registerKeyBinding(Compat.keyMapping("key.capecreator.open", GLFW.GLFW_KEY_J));
+        nextCapeKey = KeyBindingHelper.registerKeyBinding(Compat.keyMapping("key.capecreator.next", GLFW.GLFW_KEY_RIGHT_BRACKET));
+        previousCapeKey = KeyBindingHelper.registerKeyBinding(Compat.keyMapping("key.capecreator.previous", GLFW.GLFW_KEY_LEFT_BRACKET));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openEditorKey.consumeClick()) {

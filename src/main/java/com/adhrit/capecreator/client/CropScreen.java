@@ -20,7 +20,7 @@ import net.minecraft.resources.ResourceLocation;
  * cape's 10:16 shape: drag it to move, scroll (or use the buttons) to resize. The animation plays
  * underneath, with a live preview of the result.
  */
-public class CropScreen extends Screen {
+public class CropScreen extends CompatScreen {
     private static final ResourceLocation TEXTURE_ID = ResourceLocation.fromNamespaceAndPath(CapeCreatorClient.MOD_ID, "crop_source");
 
     private final Screen parent;
@@ -183,8 +183,8 @@ public class CropScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+    protected boolean onMouseClicked(double mouseX, double mouseY, int button) {
+        if (superMouseClicked(mouseX, mouseY, button)) return true;
         if (button == 0 && insideBox(mouseX, mouseY)) {
             dragging = true;
             dragOffsetX = (mouseX - viewX) / viewScale - cropX;
@@ -202,20 +202,20 @@ public class CropScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+    protected boolean onMouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (dragging) {
             cropX = (float) ((mouseX - viewX) / viewScale - dragOffsetX);
             cropY = (float) ((mouseY - viewY) / viewScale - dragOffsetY);
             clampCrop();
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        return superMouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    protected boolean onMouseReleased(double mouseX, double mouseY, int button) {
         dragging = false;
-        return super.mouseReleased(mouseX, mouseY, button);
+        return superMouseReleased(mouseX, mouseY, button);
     }
 
     @Override

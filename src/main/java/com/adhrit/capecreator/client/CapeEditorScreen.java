@@ -21,7 +21,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /** Pixel editor for the cape, with a live preview of the player wearing it. */
-public class CapeEditorScreen extends Screen {
+public class CapeEditorScreen extends CompatScreen {
     static final int[] PALETTE = {
             0xFFFFFFFF, 0xFFC0C0C0, 0xFF808080, 0xFF404040, 0xFF000000, 0xFF5A3A22, 0xFF8B5A2B, 0xFFD2A679,
             0xFFFF0000, 0xFFB01818, 0xFFFF7F00, 0xFFFFD800, 0xFFF2C94C, 0xFF7FFF00, 0xFF00A000, 0xFF0A5C2A,
@@ -266,7 +266,7 @@ public class CapeEditorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    protected boolean onMouseClicked(double mouseX, double mouseY, int button) {
         int[] c = cellAt(mouseX, mouseY);
         if (c != null) {
             setFocused(null);
@@ -292,7 +292,7 @@ public class CapeEditorScreen extends Screen {
             return true;
         }
 
-        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+        if (superMouseClicked(mouseX, mouseY, button)) return true;
 
         return preview.mouseClicked(mouseX, mouseY, button);
     }
@@ -304,31 +304,31 @@ public class CapeEditorScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+    protected boolean onMouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         if (painting) {
             int[] c = cellAt(mouseX, mouseY);
             if (c != null) paint(c[0], c[1]);
             return true;
         }
         if (preview.mouseDragged(deltaX, deltaY)) return true;
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        return superMouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    protected boolean onMouseReleased(double mouseX, double mouseY, int button) {
         painting = false;
         preview.mouseReleased();
-        return super.mouseReleased(mouseX, mouseY, button);
+        return superMouseReleased(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    protected boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
         boolean ctrl = (modifiers & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SUPER)) != 0;
         if (ctrl && keyCode == GLFW.GLFW_KEY_Z) {
             undo();
             return true;
         }
-        if (getFocused() != hexField && Screen.isPaste(keyCode)) {
+        if (getFocused() != hexField && isPasteKey(keyCode, scanCode, modifiers)) {
             String clip = minecraft.keyboardHandler.getClipboard();
             if (UrlImportScreen.looksLikeUrl(clip)) {
                 openLinkImport(clip.trim());
@@ -339,7 +339,7 @@ public class CapeEditorScreen extends Screen {
             CapeManager.selectFrame(CapeManager.editFrame() + (keyCode == GLFW.GLFW_KEY_LEFT ? -1 : 1));
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return superKeyPressed(keyCode, scanCode, modifiers);
     }
 
     /**

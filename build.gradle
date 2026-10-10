@@ -51,6 +51,27 @@ static boolean evalCondition(String condition, List<Integer> mc, String where) {
     }
 }
 
+/*
+ * Renames: the code is written with 1.21.5's names; from the listed version on, these words are
+ * swapped for the new ones (whole words only, in active code).
+ */
+static List<Map> renames() {
+    return [
+            [since: '1.21.11', from: 'ResourceLocation', to: 'Identifier'],
+            [since: '1.21.11', from: 'net.minecraft.Util', to: 'net.minecraft.util.Util'],
+    ]
+}
+
+static String applyRenames(String line, List<Integer> mc) {
+    for (rule in renames()) {
+        if (compareMc(mc, parseMc(rule.since as String)) >= 0) {
+            line = line.replaceAll('(?<!\\w)' + java.util.regex.Pattern.quote(rule.from as String) + '(?!\\w)',
+                    java.util.regex.Matcher.quoteReplacement(rule.to as String))
+        }
+    }
+    return line
+}
+
 static String preprocess(String text, List<Integer> mc, String fileName) {
     // stack entries: [enclosingActive, anyBranchTaken, thisBranchActive]
     def stack = []
@@ -83,7 +104,7 @@ static String preprocess(String text, List<Integer> mc, String fileName) {
             active = stack.pop()[0]
             out.append('\n')
         } else {
-            out.append(active ? line : '').append('\n')
+            out.append(active ? applyRenames(line, mc) : '').append('\n')
         }
     }
     if (!stack.isEmpty()) throw new GradleException("Missing //#endif in ${fileName}")

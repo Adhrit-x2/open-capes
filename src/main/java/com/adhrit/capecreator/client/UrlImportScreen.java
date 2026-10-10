@@ -21,7 +21,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /** Paste a link to a GIF or image; it's downloaded in the background and opened in the crop screen. */
-public class UrlImportScreen extends Screen {
+public class UrlImportScreen extends CompatScreen {
     private static final int MAX_BYTES = 40 * 1024 * 1024;
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)

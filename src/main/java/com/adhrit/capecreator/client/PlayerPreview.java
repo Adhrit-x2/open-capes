@@ -4,6 +4,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+//#if MC >= 1.21.11
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+//#endif
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
@@ -101,7 +104,14 @@ public class PlayerPreview {
         Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).rotateX((float) Math.toRadians(pitch));
         // drawEntity rotates around the feet; shift by the rotated centre so the model spins around its middle
         Vector3f offset = rotation.transform(new Vector3f(0, -(player.getBbHeight() / 2 + 0.0625f * player.getScale()), 0));
-        //#if MC >= 1.21.6
+        //#if MC >= 1.21.11
+        // 1.21.11 dropped renderEntityInInventory: build the render state and submit it ourselves
+        EntityRenderState state = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player).createRenderState(player, 1.0F);
+        state.lightCoords = 15728880;
+        state.shadowPieces.clear();
+        state.outlineColor = 0;
+        context.submitEntityRenderState(state, size, offset, rotation, null, x1, y1, x2, y2 - 10);
+        //#elif MC >= 1.21.6
         // drawn into its own picture the size of the box, centred the same way as before
         InventoryScreen.renderEntityInInventory(context, x1, y1, x2, y2 - 10, size, offset, rotation, null, player);
         //#else

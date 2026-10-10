@@ -1,6 +1,8 @@
 package com.adhrit.capecreator;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -8,6 +10,10 @@ import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+//#if MC >= 1.21.11
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+//#endif
 //#if MC >= 1.21.6
 import net.minecraft.client.renderer.RenderPipelines;
 //#elif MC >= 1.21.2
@@ -23,8 +29,27 @@ public final class Compat {
 
     // ---- textures and pixels (pixels are always ARGB here) ----
 
+    //#if MC >= 1.21.11
+    /** 1.21.11 moved texture filtering into a sampler that only subclasses can change. */
+    public static final class FilterableTexture extends DynamicTexture {
+        FilterableTexture(String name, int width, int height) {
+            super(() -> name, width, height, true);
+        }
+
+        FilterableTexture(String name, NativeImage image) {
+            super(() -> name, image);
+        }
+
+        void setLinear(boolean linear) {
+            this.sampler = RenderSystem.getSamplerCache().getRepeat(linear ? FilterMode.LINEAR : FilterMode.NEAREST);
+        }
+    }
+    //#endif
+
     public static DynamicTexture newTexture(String name, int width, int height) {
-        //#if MC >= 1.21.5
+        //#if MC >= 1.21.11
+        return new FilterableTexture(name, width, height);
+        //#elif MC >= 1.21.5
         return new DynamicTexture(() -> name, width, height, true);
         //#else
         return new DynamicTexture(width, height, true);
@@ -32,7 +57,9 @@ public final class Compat {
     }
 
     public static DynamicTexture newTexture(String name, NativeImage image) {
-        //#if MC >= 1.21.5
+        //#if MC >= 1.21.11
+        return new FilterableTexture(name, image);
+        //#elif MC >= 1.21.5
         return new DynamicTexture(() -> name, image);
         //#else
         return new DynamicTexture(image);
@@ -40,7 +67,11 @@ public final class Compat {
     }
 
     public static void setLinearFilter(DynamicTexture texture, boolean linear) {
+        //#if MC >= 1.21.11
+        if (texture instanceof FilterableTexture f) f.setLinear(linear);
+        //#else
         texture.setFilter(linear, false);
+        //#endif
     }
 
     public static int getArgb(NativeImage image, int x, int y) {
@@ -89,6 +120,22 @@ public final class Compat {
         g.setTooltipForNextFrame(font, text, x, y);
         //#else
         g.renderTooltip(font, text, x, y);
+        //#endif
+    }
+
+    // ---- key bindings ----
+
+    //#if MC >= 1.21.9
+    private static KeyMapping.Category category;
+    //#endif
+
+    /** A key binding in this mod's "Cape Creator" controls category. */
+    public static KeyMapping keyMapping(String translationKey, int defaultKey) {
+        //#if MC >= 1.21.9
+        if (category == null) category = KeyMapping.Category.register(ResourceLocation.fromNamespaceAndPath(CapeCreatorClient.MOD_ID, "main"));
+        return new KeyMapping(translationKey, InputConstants.Type.KEYSYM, defaultKey, category);
+        //#else
+        return new KeyMapping(translationKey, InputConstants.Type.KEYSYM, defaultKey, "category.capecreator");
         //#endif
     }
 
