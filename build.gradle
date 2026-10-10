@@ -248,6 +248,11 @@ subprojects { p ->
         filesMatching(['fabric.mod.json', 'capecreator.mixins.json']) { expand(props) }
     }
 
+    // ship the license inside every jar
+    jar {
+        from(rootProject.file('LICENSE')) { rename { "LICENSE_open-capes" } }
+    }
+
     java {
         sourceCompatibility = JavaVersion.toVersion(javaVersion)
         targetCompatibility = JavaVersion.toVersion(javaVersion)
