@@ -79,7 +79,11 @@ def main():
 
     auth = token()
     project = request("GET", f"/project/{args.project}", auth)
-    existing = {v["version_number"] for v in request("GET", f"/project/{project['id']}/version", auth)}
+    if project.get("versions"):
+        # listing needs the "Read versions" token scope; only needed when versions already exist
+        existing = {v["version_number"] for v in request("GET", f"/project/{project['id']}/version", auth)}
+    else:
+        existing = set()
     print(f"Project: {project['title']} ({project['slug']}, id {project['id']}), {len(existing)} versions already uploaded")
 
     jars = []
