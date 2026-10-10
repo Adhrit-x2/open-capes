@@ -75,11 +75,14 @@ def main():
     ap.add_argument("--publish", action="store_true", help="actually upload (default is a dry run)")
     ap.add_argument("--changelog", default="Initial release.")
     ap.add_argument("--type", default="release", choices=["release", "beta", "alpha"])
+    ap.add_argument("--assume-new", action="store_true",
+                    help="don't list existing versions (for tokens without the 'Read versions' scope); "
+                         "only use when you know these version numbers aren't uploaded yet")
     args = ap.parse_args()
 
     auth = token()
     project = request("GET", f"/project/{args.project}", auth)
-    if project.get("versions"):
+    if project.get("versions") and not args.assume_new:
         # listing needs the "Read versions" token scope; only needed when versions already exist
         existing = {v["version_number"] for v in request("GET", f"/project/{project['id']}/version", auth)}
     else:
