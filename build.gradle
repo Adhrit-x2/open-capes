@@ -242,7 +242,8 @@ subprojects { p ->
     }
 
     processResources {
-        def props = [version: p.version, minecraft: mcVersion, java: javaVersion]
+        def props = [version: p.version, minecraft: mcVersion, java: javaVersion,
+                     minFabricApi: p.property('min_fabric_api'), minLoader: p.property('min_loader')]
         inputs.properties(props)
         filesMatching(['fabric.mod.json', 'capecreator.mixins.json']) { expand(props) }
     }
