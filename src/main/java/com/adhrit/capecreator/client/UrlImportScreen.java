@@ -1,5 +1,6 @@
 package com.adhrit.capecreator.client;
 
+import com.adhrit.capecreator.Compat;
 import com.adhrit.capecreator.CapeCreatorClient;
 import com.adhrit.capecreator.CapeLibrary;
 import java.io.ByteArrayOutputStream;
@@ -16,7 +17,6 @@ import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -102,12 +102,10 @@ public class UrlImportScreen extends Screen {
     private void saveToLibrary(String url) {
         try {
             CapeLibrary.Entry entry = CapeLibrary.addCurrent(CapeLibrary.uniqueName(CapeLibrary.nameFromUrl(url)));
-            SystemToast.addOrUpdate(minecraft.getToastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                    Component.literal("Cape saved"), Component.literal("Added \"" + entry.name() + "\" to your saved capes"));
+            Compat.toast(Component.literal("Cape saved"), Component.literal("Added \"" + entry.name() + "\" to your saved capes"));
         } catch (Exception e) {
             CapeCreatorClient.LOGGER.warn("Could not save imported cape", e);
-            SystemToast.addOrUpdate(minecraft.getToastManager(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                    Component.literal("Couldn't save cape"), Component.literal(String.valueOf(e.getMessage())));
+            Compat.toast(Component.literal("Couldn't save cape"), Component.literal(String.valueOf(e.getMessage())));
         }
     }
 

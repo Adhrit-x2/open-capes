@@ -289,7 +289,7 @@ public final class CapeManager {
         int w = image.getWidth(), h = image.getHeight();
         int[] argb = new int[w * h];
         for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) argb[y * w + x] = image.getPixel(x, y);
+            for (int x = 0; x < w; x++) argb[y * w + x] = Compat.getArgb(image, x, y);
         }
         return argb;
     }
@@ -299,7 +299,7 @@ public final class CapeManager {
         int[] f = new int[w * h];
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                f[y * w + x] = 0xFF000000 | image.getPixel(x * image.getWidth() / w, top + y * regionH / h);
+                f[y * w + x] = 0xFF000000 | Compat.getArgb(image, x * image.getWidth() / w, top + y * regionH / h);
             }
         }
         return f;
@@ -321,23 +321,23 @@ public final class CapeManager {
         int texW = 64 * s, texH = 32 * s;
         if (texture == null || texture.getPixels() == null
                 || texture.getPixels().getWidth() != texW || texture.getPixels().getHeight() != texH) {
-            texture = new DynamicTexture(() -> "capecreator custom cape", texW, texH, true);
+            texture = Compat.newTexture("capecreator custom cape", texW, texH);
             // Smooth filtering suits detailed 8x/16x images; small pixel-art capes stay crisp.
-            texture.setFilter(s >= 8, false);
+            Compat.setLinearFilter(texture, s >= 8);
             Minecraft.getInstance().getTextureManager().register(TEXTURE_ID, texture);
         }
         NativeImage img = texture.getPixels();
-        img.fillRect(0, 0, texW, texH, 0);
+        Compat.fill(img, 0, 0, texW, texH, 0);
 
         int w = width(), h = height();
         // Edges (left, right, top, bottom faces) and the inside: custom colours, or the main background colour.
         int edge = effectiveEdgeColor(), inside = effectiveInsideColor();
-        img.fillRect(0, 0, 22 * s, 17 * s, edge);
-        img.fillRect(12 * s, s, 10 * s, 16 * s, inside);
+        Compat.fill(img, 0, 0, 22 * s, 17 * s, edge);
+        Compat.fill(img, 12 * s, s, 10 * s, 16 * s, inside);
         // Outside of the cape (seen from behind the player): the design itself.
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                img.setPixel(s + x, s + y, get(frame, x, y));
+                Compat.setArgb(img, s + x, s + y, get(frame, x, y));
             }
         }
 
@@ -346,13 +346,13 @@ public final class CapeManager {
         int ex = 22 * s, ew = 24 * s, eh = 22 * s;
         for (int y = 0; y < eh; y++) {
             for (int x = 0; x < ew; x++) {
-                img.setPixel(ex + x, y, get(frame, x * w / ew, y * h / eh));
+                Compat.setArgb(img, ex + x, y, get(frame, x * w / ew, y * h / eh));
             }
         }
         int fx = 24 * s, fy = 2 * s, fw = 10 * s, fh = 20 * s;
         for (int y = 0; y < fh; y++) {
             for (int x = 0; x < fw; x++) {
-                img.setPixel(fx + x, fy + y, get(frame, x * w / fw, y * h / fh));
+                Compat.setArgb(img, fx + x, fy + y, get(frame, x * w / fw, y * h / fh));
             }
         }
 
@@ -453,7 +453,7 @@ public final class CapeManager {
             for (int i = 0; i < frames.size(); i++) {
                 for (int y = 0; y < h; y++) {
                     for (int x = 0; x < w; x++) {
-                        image.setPixel(x, i * h + y, get(i, x, y));
+                        Compat.setArgb(image, x, i * h + y, get(i, x, y));
                     }
                 }
             }

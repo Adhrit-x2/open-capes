@@ -1,5 +1,6 @@
 package com.adhrit.capecreator.client;
 
+import com.adhrit.capecreator.Compat;
 import com.adhrit.capecreator.CapeCreatorClient;
 import com.adhrit.capecreator.CapeLibrary;
 import com.adhrit.capecreator.CapeManager;
@@ -14,7 +15,6 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -79,7 +79,7 @@ public class SavedCapesScreen extends Screen {
             ResourceLocation id = ResourceLocation.fromNamespaceAndPath(CapeCreatorClient.MOD_ID, "saved_thumb_" + i);
             try {
                 NativeImage img = thumbnail(entries.get(i));
-                minecraft.getTextureManager().register(id, new DynamicTexture(() -> "capecreator thumb", img));
+                minecraft.getTextureManager().register(id, Compat.newTexture("capecreator thumb", img));
                 thumbs.add(id);
             } catch (Exception e) {
                 CapeCreatorClient.LOGGER.warn("Could not read saved cape {}", entries.get(i).file(), e);
@@ -123,7 +123,7 @@ public class SavedCapesScreen extends Screen {
         NativeImage out = new NativeImage(THUMB_W, THUMB_H, false);
         for (int y = 0; y < THUMB_H; y++) {
             for (int x = 0; x < THUMB_W; x++) {
-                out.setPixel(x, y, 0xFF000000 | argb[(oy + y * ch / THUMB_H) * w + ox + x * cw / THUMB_W]);
+                Compat.setArgb(out, x, y, 0xFF000000 | argb[(oy + y * ch / THUMB_H) * w + ox + x * cw / THUMB_W]);
             }
         }
         return out;
@@ -222,14 +222,14 @@ public class SavedCapesScreen extends Screen {
                 if (wearing) outline(context, x - 1, y - 1, THUMB_W + 2, THUMB_H + 2, border);
                 ResourceLocation thumb = thumbs.get(i);
                 if (thumb != null) {
-                    context.blit(RenderType::guiTextured, thumb, x, y, 0, 0, THUMB_W, THUMB_H, THUMB_W, THUMB_H);
+                    Compat.blit(context, thumb, x, y, 0, 0, THUMB_W, THUMB_H, THUMB_W, THUMB_H, THUMB_W, THUMB_H);
                 } else {
                     context.fill(x, y, x + THUMB_W, y + THUMB_H, 0xFF300000);
                 }
             }
         }
         if (hovered >= 0) {
-            context.renderTooltip(font, Component.literal(entries.get(hovered).name()), mouseX, mouseY);
+            Compat.tooltip(context, font, Component.literal(entries.get(hovered).name()), mouseX, mouseY);
         }
         if (maxScroll() > 0) {
             context.drawString(font, Component.literal("Scroll for more"), 8, height - 64, 0xFFA0A0A0);

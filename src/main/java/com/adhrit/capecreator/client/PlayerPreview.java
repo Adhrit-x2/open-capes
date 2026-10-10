@@ -101,7 +101,12 @@ public class PlayerPreview {
         Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI).rotateX((float) Math.toRadians(pitch));
         // drawEntity rotates around the feet; shift by the rotated centre so the model spins around its middle
         Vector3f offset = rotation.transform(new Vector3f(0, -(player.getBbHeight() / 2 + 0.0625f * player.getScale()), 0));
+        //#if MC >= 1.21.6
+        // drawn into its own picture the size of the box, centred the same way as before
+        InventoryScreen.renderEntityInInventory(context, x1, y1, x2, y2 - 10, size, offset, rotation, null, player);
+        //#else
         InventoryScreen.renderEntityInInventory(context, (x1 + x2) / 2f, (y1 + y2 - 10) / 2f, size, offset, rotation, null, player);
+        //#endif
         context.disableScissor();
 
         player.yBodyRot = bodyYaw;

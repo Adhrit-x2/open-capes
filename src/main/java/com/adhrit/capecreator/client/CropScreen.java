@@ -1,5 +1,6 @@
 package com.adhrit.capecreator.client;
 
+import com.adhrit.capecreator.Compat;
 import com.adhrit.capecreator.CapeCreatorClient;
 import com.adhrit.capecreator.CapeManager;
 import com.mojang.blaze3d.platform.NativeImage;
@@ -10,7 +11,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -107,8 +107,8 @@ public class CropScreen extends Screen {
                 .bounds(px, height - 26, 106, 20).build());
 
         if (texture == null) {
-            texture = new DynamicTexture(() -> "capecreator crop source", source.width(), source.height(), false);
-            texture.setFilter(true, false);
+            texture = Compat.newTexture("capecreator crop source", source.width(), source.height());
+            Compat.setLinearFilter(texture, true);
             minecraft.getTextureManager().register(TEXTURE_ID, texture);
             shownFrame = -1;
         }
@@ -138,7 +138,7 @@ public class CropScreen extends Screen {
         int[] px = source.frames().get(frame);
         for (int y = 0; y < source.height(); y++) {
             for (int x = 0; x < source.width(); x++) {
-                img.setPixel(x, y, 0xFF000000 | px[y * source.width() + x]);
+                Compat.setArgb(img, x, y, 0xFF000000 | px[y * source.width() + x]);
             }
         }
         texture.upload();
@@ -150,7 +150,7 @@ public class CropScreen extends Screen {
         updateTexture();
         context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFFFF);
 
-        context.blit(RenderType::guiTextured, TEXTURE_ID, viewX, viewY, 0, 0, viewW, viewH,
+        Compat.blit(context, TEXTURE_ID, viewX, viewY, 0, 0, viewW, viewH,
                 source.width(), source.height(), source.width(), source.height());
 
         // dim everything outside the crop box, then outline it
@@ -166,7 +166,7 @@ public class CropScreen extends Screen {
         // live preview of the cape
         context.drawString(font, Component.literal("Preview"), previewX, previewY - 11, 0xFFA0A0A0);
         outline(context, previewX - 1, previewY - 1, previewW + 2, previewH + 2, 0xFFFFFFFF);
-        context.blit(RenderType::guiTextured, TEXTURE_ID, previewX, previewY, cropX, cropY,
+        Compat.blit(context, TEXTURE_ID, previewX, previewY, cropX, cropY,
                 previewW, previewH, Math.round(cropW), Math.round(cropH()), source.width(), source.height());
 
         int s = outputScale();
